@@ -1,6 +1,4 @@
-🐆
-
-# Leopard
+# Leopard 🐆
 
 _Leptonic top tagger_
 
