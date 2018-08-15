@@ -1,0 +1,15 @@
+<use   name="Analysis/leopard"/>
+<use   name="lwtnn/lwtnn"/>
+<use   name="rootphysics"/>
+<use   name="rootgraphics"/>
+<use   name="root"/>
+
+<bin   name="run_training" file="run_training.cxx">
+</bin>
+
+<bin   name="run_inference" file="run_inference.cxx">
+</bin>
+
+
+<Flags CXXFLAGS="-lLHAPDF -lMinuit -lTreePlayer -fopenmp -Wno-error=unused-but-set-variable -Wno-error=unused-variable -Wno-error=maybe-uninitialized"/>
+<!--  some things appear as errors that shouldn't (or I don't see a way to 'fix' them) -->

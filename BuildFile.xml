@@ -1,0 +1,14 @@
+<use   name="JetMETCorrections/Modules"/>
+<use   name="CondFormats/JetMETObjects"/>
+<use   name="DataFormats/JetReco"/>
+<use   name="lwtnn/lwtnn"/>
+
+<use   name="boost"/>
+<use   name="eigen"/>
+<use   name="LHAPDF"/>
+<use   name="root"/>
+<use   name="rootMinuit"/>
+
+<export>
+  <lib   name="1"/>
+</export>
