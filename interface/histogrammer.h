@@ -42,8 +42,6 @@ class histogrammer {
                                   const unsigned int nBinsY, const double *ybins );
 
     /* fill histograms */
-    virtual void fill( Event& event );
-    virtual void fill( const std::string& name, Event& event, double event_weight );
     virtual void fill( const std::string& name, const double& value, const double& weight );
     virtual void fill( const std::string& name, const double& xvalue, const double& yvalue, const double& weight );
     virtual void fill( const std::map<std::string,double> top, double weight=1.0 );

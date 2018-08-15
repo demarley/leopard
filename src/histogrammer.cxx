@@ -72,9 +72,7 @@ void histogrammer::initialize( TFile& outputFile, bool doSystWeights ){
     /* Setup some values and book histograms */
     m_doSystWeights = doSystWeights;
     outputFile.cd();
-
     bookHists( m_name );
-
     return;
 }
 
@@ -119,24 +117,6 @@ void histogrammer::fill( const std::string& name,
     /* TH2D */
     TH2D* this_hist = m_map_histograms2D.at("h_"+name);
     this_hist->Fill(xvalue,yvalue,weight);
-    return;
-}
-
-void histogrammer::fill( Event& event ){
-    /* Fill histograms -- fill histograms based on treename or systematic weights ("nominal" but different weight)
-       This is the function to modify / inherit for analysis-specific purposes
-    */
-    cma::DEBUG("HISTOGRAMMER : Fill histograms: ");
-    std::string treeName = event.treeName();
-    double event_weight  = event.nominal_weight();
-    fill( m_name+treeName, event, event_weight );
-    return;
-}
-
-void histogrammer::fill( const std::string& name, Event& event, double event_weight){
-    /* Fill histograms -- just use information from the event and fill histogram
-       This is the function to modify / inherit for analysis-specific purposes
-    */
     return;
 }
 
