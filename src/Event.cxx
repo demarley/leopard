@@ -25,60 +25,78 @@ Event::Event( TTreeReader &myReader, configuration &cmaConfig ) :
     m_DNNinference = m_config->DNNinference();              // load DNN inputs for inference
 
     // ** LOAD BRANCHES FROM TTREE ** //
-    // Event Info -- Filters and Triggers
-    m_eeBadScFilter   = new TTreeReaderValue<int>(m_ttree,"eeBadScFilter");
-    m_BadPFMuonFilter = new TTreeReaderValue<unsigned int>(m_ttree,"BadPFMuonFilter");
-    m_noBadMuonsFilter = new TTreeReaderValue<int>(m_ttree,"noBadMuonsFilter");
-    m_badMuonsFilter   = new TTreeReaderValue<int>(m_ttree,"badMuonsFilter");
-    m_duplicateMuonsFilter = new TTreeReaderValue<int>(m_ttree,"duplicateMuonsFilter");
-    m_HBHENoiseFilter = new TTreeReaderValue<unsigned int>(m_ttree,"HBHENoiseFilter");
-    m_goodVerticesFilter = new TTreeReaderValue<int>(m_ttree,"goodVerticesFilter");
-    m_HBHEIsoNoiseFilter = new TTreeReaderValue<unsigned int>(m_ttree,"HBHEIsoNoiseFilter");
-    m_globalTightHalo2016Filter = new TTreeReaderValue<int>(m_ttree,"globalTightHalo2016Filter");
-    m_BadChargedCandidateFilter = new TTreeReaderValue<unsigned int>(m_ttree,"BadChargedCandidateFilter");
-    m_EcalDeadCellTriggerPrimitiveFilter = new TTreeReaderValue<int>(m_ttree,"EcalDeadCellTriggerPrimitiveFilter");
-
-    m_PassTrigger  = new TTreeReaderValue<std::vector<int>>(m_ttree,"PassTrigger");
-    m_TriggerNames = new TTreeReaderValue<std::vector<std::string>>(m_ttree,"TriggerNames");
-
     // AK4
-    m_NJetsISR = new TTreeReaderValue<int>(m_ttree,"NJetsISR");
-    m_ak4LVec  = new TTreeReaderValue<std::vector<TLorentzVector>>(m_ttree,"jetsLVec");
-    m_ak4Flavor = new TTreeReaderValue<std::vector<int>>(m_ttree,"recoJetsFlavor");
-    m_ak4Charge = new TTreeReaderValue<std::vector<double>>(m_ttree,"recoJetsCharge_0");
-    m_ak4looseJetID = new TTreeReaderValue<unsigned int>(m_ttree,"looseJetID");
-    m_ak4tightJetID = new TTreeReaderValue<unsigned int>(m_ttree,"tightJetID");
-    m_ak4tightlepvetoJetID = new TTreeReaderValue<unsigned int>(m_ttree,"tightlepvetoJetID");
-    m_ak4deepCSV_b  = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepCSVb");
-    m_ak4deepCSV_bb = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepCSVbb");
-    m_ak4deepCSV_c  = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepCSVc");
-    m_ak4deepCSV_cc = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepCSVcc");
-    m_ak4deepCSV_l  = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepCSVl");
-    m_ak4deepFlavor_b    = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepFlavorb");
-    m_ak4deepFlavor_bb   = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepFlavorbb");
-    m_ak4deepFlavor_lepb = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepFlavorlepb");
-    m_ak4deepFlavor_c    = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepFlavorc");
-    m_ak4deepFlavor_uds  = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepFlavoruds");
-    m_ak4deepFlavor_g    = new TTreeReaderValue<std::vector<double>>(m_ttree,"DeepFlavorg");
-    m_ak4qgLikelihood = new TTreeReaderValue<std::vector<double>>(m_ttree,"qgLikelihood");
-    m_ak4qgPtD   = new TTreeReaderValue<std::vector<double>>(m_ttree,"qgPtD");
-    m_ak4qgAxis1 = new TTreeReaderValue<std::vector<double>>(m_ttree,"qgAxis1");
-    m_ak4qgAxis2 = new TTreeReaderValue<std::vector<double>>(m_ttree,"qgAxis2");
-    m_ak4qgMult  = new TTreeReaderValue<std::vector<int>>(m_ttree,"qgMult");
+    m_jet_pt  = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4pt");
+    m_jet_eta = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4eta");
+    m_jet_phi = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4phi");
+    m_jet_m   = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4mass");
+    m_jet_bdisc    = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4bDisc");
+    m_jet_deepCSV  = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4deepCSV");
+    m_jet_area     = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4area");
+    m_jet_uncorrPt = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4uncorrPt");
+    m_jet_uncorrE  = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4uncorrE");
+    m_jet_jerSF    = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4jerSF");
+    m_jet_jerSF_UP = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4jerSF_UP");
+    m_jet_jerSF_DOWN = new TTreeReaderValue<std::vector<float>>(m_ttree,"AK4jerSF_DOWN");
 
-    // TRUTH
+    // Leptons
+    m_el_pt  = new TTreeReaderValue<std::vector<float>>(m_ttree,"ELpt");
+    m_el_eta = new TTreeReaderValue<std::vector<float>>(m_ttree,"ELeta");
+    m_el_phi = new TTreeReaderValue<std::vector<float>>(m_ttree,"ELphi");
+    m_el_e   = new TTreeReaderValue<std::vector<float>>(m_ttree,"ELenergy");
+    m_el_charge = new TTreeReaderValue<std::vector<float>>(m_ttree,"ELcharge");
+    m_el_id_loose  = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"ELlooseID");
+    m_el_id_medium = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"ELmediumID");
+    m_el_id_tight  = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"ELtightID");
+    m_el_id_loose_noIso  = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"ELlooseIDnoIso");
+    m_el_id_medium_noIso = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"ELmediumIDnoIso");
+    m_el_id_tight_noIso  = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"ELtightIDnoIso");
+
+    m_mu_pt  = new TTreeReaderValue<std::vector<float>>(m_ttree,"MUpt");
+    m_mu_eta = new TTreeReaderValue<std::vector<float>>(m_ttree,"MUeta");
+    m_mu_phi = new TTreeReaderValue<std::vector<float>>(m_ttree,"MUphi");
+    m_mu_e   = new TTreeReaderValue<std::vector<float>>(m_ttree,"MUenergy");
+    m_mu_charge = new TTreeReaderValue<std::vector<float>>(m_ttree,"MUcharge");
+    m_mu_iso = new TTreeReaderValue<std::vector<float>>(m_ttree,"MUcorrIso");
+    m_mu_id_loose  = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"MUlooseID");
+    m_mu_id_medium = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"MUmediumID");
+    m_mu_id_tight  = new TTreeReaderValue<std::vector<unsigned int>>(m_ttree,"MUtightID");
+
+    // MET
+    m_met_met  = new TTreeReaderValue<float>(m_ttree,"METpt");
+    m_met_phi  = new TTreeReaderValue<float>(m_ttree,"METphi");
+
+
+    // set some event weights and access necessary branches
+    m_xsection       = 1.0;
+    m_kfactor        = 1.0;
+    m_sumOfWeights   = 1.0;
+    m_LUMI           = m_config->LUMI();
+
+    Sample ss = m_config->sample();
+
+    // MC information
     m_useTruth = (m_config->useTruth());
     if (m_isMC){
-        m_selPDGid   = new TTreeReaderValue<std::vector<int>>(m_ttree,"selPDGid");
-        m_genMatched = new TTreeReaderValue<std::vector<double>>(m_ttree,"genMatched");
-        m_genDecayLVec   = new TTreeReaderValue<std::vector<TLorentzVector>>(m_ttree,"genDecayLVec");
-        m_genDecayIdxVec = new TTreeReaderValue<std::vector<int>>(m_ttree,"genDecayIdxVec");
-        m_genDecayPdgIdVec  = new TTreeReaderValue<std::vector<int>>(m_ttree,"genDecayPdgIdVec");
-        m_genDecayMomIdxVec = new TTreeReaderValue<std::vector<int>>(m_ttree,"genDecayMomIdxVec");
-        m_genDecayMomRefVec = new TTreeReaderValue<std::vector<int>>(m_ttree,"genDecayMomRefVec");
+      //m_weight_mc    = 1;//new TTreeReaderValue<float>(m_ttree,"evt_Gen_Weight");
+      m_xsection     = ss.XSection;
+      m_kfactor      = ss.KFactor;        // most likely =1
+      m_sumOfWeights = ss.sumOfWeights;
 
-        m_stored_weight = new TTreeReaderValue<double>(m_ttree,"stored_weight");
-    } // end isMC
+      // TRUTH 
+      if (m_config->isTtbar()){
+        m_mc_pt  = new TTreeReaderValue<std::vector<float>>(m_ttree,"GENpt");
+        m_mc_eta = new TTreeReaderValue<std::vector<float>>(m_ttree,"GENeta");
+        m_mc_phi = new TTreeReaderValue<std::vector<float>>(m_ttree,"GENphi");
+        m_mc_e   = new TTreeReaderValue<std::vector<float>>(m_ttree,"GENenergy");
+        m_mc_pdgId  = new TTreeReaderValue<std::vector<int>>(m_ttree,"GENid");
+        m_mc_status = new TTreeReaderValue<std::vector<int>>(m_ttree,"GENstatus");
+        m_mc_parent_idx = new TTreeReaderValue<std::vector<int>>(m_ttree,"GENparent_idx");
+        m_mc_child0_idx = new TTreeReaderValue<std::vector<int>>(m_ttree,"GENchild0_idx");
+        m_mc_child1_idx = new TTreeReaderValue<std::vector<int>>(m_ttree,"GENchild1_idx");
+        m_mc_isHadTop = new TTreeReaderValue<std::vector<int>>(m_ttree,"GENisHadTop");
+      }
+    }
 
     // Truth matching tool
     m_truthMatchingTool = new truthMatching(cmaConfig);
@@ -97,7 +115,7 @@ void Event::clear(){
     m_truth_partons.clear();
     m_truth_tops.clear();
 
-    m_lepton = {};
+    m_leptons.clear();
     m_jets.clear();
 
     m_dnnInputs.clear();
@@ -148,12 +166,22 @@ void Event::execute(Long64_t entry){
     initialize_jets();
     cma::DEBUG("EVENT : Setup small-R jets ");
 
-    // Lepton
-    initialize_lepton();
+    // Leptons
+    initialize_leptons();
     cma::DEBUG("EVENT : Setup lepton ");
 
+    // MET
+    initialize_kinematics();
+    cma::DEBUG("EVENT : Setup kinematics" );
+
     // Ttbar Reconstruction
-    m_ttbarRecoTool->execute(m_jets,m_lepton);
+    if (m_leptons.size()>0)
+        m_ttbarRecoTool->execute(m_jets,m_leptons.at(0),m_met);
+    else{
+        // no lepton -- event will fail the selection anyway
+        Lepton dummy;
+        m_ttbarRecoTool->execute(m_jets,dummy,m_met);
+    }
     m_ttbar = m_ttbarRecoTool->tops();
 
     // DNN prediction for each Top object
@@ -169,21 +197,30 @@ void Event::execute(Long64_t entry){
 void Event::initialize_truth(){
     /* Setup struct of truth information */
     m_truth_partons.clear();
-    unsigned int nPartons( (*m_genDecayLVec)->size() );
+    m_truth_tops.clear();
+
+    if (!m_config->isTtbar()) return;   // don't need this for MC other than ttbar
+
+    // only care about this for ttbar
+    unsigned int nPartons( (*m_mc_pt)->size() );
+    cma::DEBUG("EVENT : N Partons = "+std::to_string(nPartons));
 
     // Collect truth top information into one value
     unsigned int t_idx(0);  // keeping track of tops in m_truth_tops
-    m_truth_tops.clear();
 
     // loop over truth partons
+    unsigned int p_idx(0);
     for (unsigned int i=0; i<nPartons; i++){
-        Parton parton;
-        parton.p4 = (*m_genDecayLVec)->at(i);
 
-        int pdgId = (*m_genDecayPdgIdVec)->at(i);
+        Parton parton;
+        parton.p4.SetPtEtaPhiE((*m_mc_pt)->at(i),(*m_mc_eta)->at(i),(*m_mc_phi)->at(i),(*m_mc_e)->at(i));
+
+        int status = (*m_mc_status)->at(i);
+        int pdgId  = (*m_mc_pdgId)->at(i);
         unsigned int abs_pdgId = std::abs(pdgId);
 
-        parton.pdgId = pdgId;
+        parton.pdgId  = pdgId;
+        parton.status = status;
 
         // simple booleans for type
         parton.isTop = ( abs_pdgId==6 );
@@ -202,41 +239,63 @@ void Event::initialize_truth(){
             parton.isBottom = ( abs_pdgId==5 );
         }
 
-        parton.index      = i;                              // index in vector of truth_partons
-        parton.decayIdx   = (*m_genDecayIdxVec)->at(i);     // index in full truth record of parton
-        parton.parent_ref = (*m_genDecayMomRefVec)->at(i);  // index in truth vector of parent
-        parton.parent_idx = (*m_genDecayMomIdxVec)->at(i);  // index in full truth record of parent
-        parton.top_index  = -1;                             // index in truth_tops vector
-        parton.containment = 0;                             // value for determining matching
+        parton.index      = p_idx;                    // index in vector of truth_partons
+        parton.top_index  = -1;                       // index in truth_tops vector
+        parton.containment = NONE;                    // value for containment calculation
+
+        parton.parent_idx = (*m_mc_parent_idx)->at(i);
+        parton.child0_idx = (*m_mc_child0_idx)->at(i);
+        parton.child1_idx = (*m_mc_child1_idx)->at(i);
+
+        // skip replicated top/W in truth record
+        if (parton.isTop && parton.status<60) continue;
+        if (parton.isW && (parton.child0_idx<0 || parton.child1_idx<0)) continue;
 
         // build truth top structs
         // in truth parton record, the top should arrive before its children
         TruthTop top;
 
         if (parton.isTop){
+            cma::DEBUG("EVENT : is top ");
             top.Wdecays.clear();    // for storing W daughters
             top.daughters.clear();  // for storing non-W/bottom daughters
 
             top.Top       = parton.index;
             top.isTop     = (pdgId>0);
             top.isAntiTop = (pdgId<0);
-            top.isHadronic = false;     // initialize
-            top.isLeptonic = false;     // initialize
-            parton.top_index = t_idx;
+            top.isHadronic = (*m_mc_isHadTop)->at(p_idx);
+            top.isLeptonic = !(*m_mc_isHadTop)->at(p_idx);
+            parton.top_index   = t_idx;
+            parton.containment = FULL;                            // 'FULL' because it is the top
+            if (parton.pdgId<0) parton.containment *= -1;         // negative value for anti-tops
 
-            m_truth_tops.push_back(top);   // store tops now, add information from children in the next iterations over partons
+            m_truth_tops.push_back(top);   // store tops now, add information from children in future iterations
             t_idx++;
         }
-        else if (parton.parent_ref>0){
-            // check the parent! (ignore parent_ref<=0 -- doesn't exist)
-            Parton parent = m_truth_partons.at(parton.parent_ref);
+        else if (!parton.isTop && parton.parent_idx>0) {
+            int parent_pdgid = (*m_mc_pdgId)->at(parton.parent_idx);
+            cma::DEBUG("EVENT : it's not a top, it's a "+std::to_string(pdgId)+"; parent idx = "+std::to_string(parton.parent_idx)+"; parent pdgid = "+std::to_string(parent_pdgid));
 
-            // check if grandparent exists
-            int top_index(-1);            // to refer to (grand)parent top quark in m_truth_tops
-            if(parent.parent_ref>0) {
-                Parton gparent = m_truth_partons.at(parent.parent_ref);  // parent of parent
-                if (gparent.isTop) top_index = gparent.top_index;
+            // check if W is decaying to itself
+            if (std::abs(parent_pdgid) == 24 && parent_pdgid == parton.pdgId) {// look at grandparent
+                int gparent_idx = (*m_mc_parent_idx)->at(parton.parent_idx);
+                parent_pdgid = (*m_mc_pdgId)->at(gparent_idx);
             }
+            else if (parent_pdgid==parton.pdgId) continue;    // other particles self-decaying, just skip
+
+            // get the parent from the list of partons
+            Parton parent;
+            int top_index(-1);
+            for (const auto& t : m_truth_partons){
+                if (t.pdgId==parent_pdgid) {
+                    parent    = t;
+                    top_index = t.top_index;
+                    break;
+                }
+            }
+            if (top_index<0) continue;    // weird element in truth record, just skip it
+            parton.top_index = top_index;
+            cma::DEBUG("EVENT : Top index = "+std::to_string(top_index));
 
             // Parent is Top (W or b)
             if (parent.isTop){
@@ -251,7 +310,7 @@ void Event::initialize_truth(){
                 m_truth_tops[parent.top_index] = top;                // update entry
             }
             // Parent is W
-            else if (parent.isW && top_index>=0){
+            else if (parent.isW){
                 top = m_truth_tops.at(top_index);
                 top.Wdecays.push_back(parton.index);
                 top.isHadronic = (parton.isQuark);
@@ -262,10 +321,11 @@ void Event::initialize_truth(){
 
                 m_truth_tops[top_index] = top;      // update entry
             }
-        } // end else if
+        } // end else if not top
 
         // store for later access
         m_truth_partons.push_back( parton );
+        p_idx++;
     } // end loop over truth partons
 
     m_truthMatchingTool->setTruthPartons(m_truth_partons);
@@ -277,48 +337,51 @@ void Event::initialize_truth(){
 
 void Event::initialize_jets(){
     /* Setup struct of jets (small-r) and relevant information */
-    m_jets.clear();  // don't know a priori the number of jets that pass kinematics
-    m_ak4candidates.clear();
+    unsigned int nJets = (*m_jet_pt)->size();
+    m_jets.clear();
+    m_jets_iso.clear();       // jet collection for lepton 2D isolation
+    m_ak4candidates.clear();  // AK4s to use for training
 
-    unsigned int j_idx(0); // counting jets that pass kinematic cuts
-    for (unsigned int i=0,size=(*m_ak4LVec)->size(); i<size; i++){
+    unsigned int idx(0);
+    unsigned int idx_iso(0);
+    for (unsigned int i=0; i<nJets; i++){
         Jet jet;
-        jet.p4 = (*m_ak4LVec)->at(i);
+        jet.p4.SetPtEtaPhiM( (*m_jet_pt)->at(i),(*m_jet_eta)->at(i),(*m_jet_phi)->at(i),(*m_jet_m)->at(i));
 
-        // kinematic cuts
-        if (jet.p4.Pt() < 30 || std::abs( jet.p4.Eta() > 2.4 ) ) continue;
+        bool isGoodIso( jet.p4.Pt()>15 && std::abs(jet.p4.Eta())<2.4);
+        bool isGood(jet.p4.Pt()>50 && std::abs(jet.p4.Eta())<2.4);
 
-        // Other properties
-        jet.charge = (*m_ak4Charge)->at(i);
-        jet.true_flavor = (m_isMC) ? (*m_ak4Flavor)->at(i) : -1;
-        jet.index  = j_idx;
-        jet.radius = 0.4;
-        jet.containment = 0;   // initialize in case this is data
+        if (!isGood && !isGoodIso) continue;
 
-        jet.deepCSVb  = (*m_ak4deepCSV_b)->at(i);
-        jet.deepCSVbb = (*m_ak4deepCSV_bb)->at(i);
-        jet.deepCSVc  = (*m_ak4deepCSV_c)->at(i);
-        jet.deepCSVcc = (*m_ak4deepCSV_cc)->at(i);
-        jet.deepCSVl  = (*m_ak4deepCSV_l)->at(i);
+        jet.isGood = isGood;
 
-        jet.deepFlavorb  = (*m_ak4deepFlavor_b)->at(i);
-        jet.deepFlavorbb = (*m_ak4deepFlavor_bb)->at(i);
-        jet.deepFlavorc  = (*m_ak4deepFlavor_c)->at(i);
-        jet.deepFlavorg  = (*m_ak4deepFlavor_g)->at(i);
-        jet.deepFlavoruds  = (*m_ak4deepFlavor_uds)->at(i);
-        jet.deepFlavorlepb = (*m_ak4deepFlavor_lepb)->at(i);
+        jet.bdisc    = (*m_jet_bdisc)->at(i);
+        jet.deepCSV  = (*m_jet_deepCSV)->at(i);
+        jet.area     = (*m_jet_area)->at(i);
+        jet.uncorrE  = (*m_jet_uncorrE)->at(i);
+        jet.uncorrPt = (*m_jet_uncorrPt)->at(i);
+        jet.jerSF    = (*m_jet_jerSF)->at(i);
+        jet.jerSF_UP = (*m_jet_jerSF_UP)->at(i);
+        jet.jerSF_DOWN = (*m_jet_jerSF_DOWN)->at(i);
 
-        // truth matching
-        if (m_useTruth){
-            cma::DEBUG("EVENT : Truth match AK4 jets");
+        jet.index = idx;
 
-            // parton
-            m_truthMatchingTool->matchJetToTruthTop(jet);
-            if (jet.containment!=0) m_ak4candidates.push_back(jet.index);
+        if (isGood){
+            m_jets.push_back(jet);
+
+            // truth matching
+            if (m_useTruth){
+                cma::DEBUG("EVENT : Truth match AK4 jets");
+                m_truthMatchingTool->matchLeptonicTopJet(jet);
+                if (jet.containment!=0) m_ak4candidates.push_back(jet.index);
+            }
+
+            idx++;
         }
-
-        m_jets.push_back(jet);
-        j_idx++;
+        if (isGoodIso){
+            m_jets_iso.push_back(jet);    // used for 2D isolation
+            idx_iso++;
+        }
     }
 
     return;
@@ -328,18 +391,23 @@ void Event::initialize_jets(){
 void Event::initialize_leptons(){
     /* Setup struct of lepton and relevant information */
     m_leptons.clear();
-    m_electrons.clear();
-    m_muons.clear();
 
     // Muons
     unsigned int nMuons = (*m_mu_pt)->size();
     for (unsigned int i=0; i<nMuons; i++){
         Lepton mu;
         mu.p4.SetPtEtaPhiE( (*m_mu_pt)->at(i),(*m_mu_eta)->at(i),(*m_mu_phi)->at(i),(*m_mu_e)->at(i));
-        bool isMedium   = (*m_mu_id_medium)->at(i);
-        bool isTight    = (*m_mu_id_tight)->at(i);
 
-        bool iso = customIsolation(mu);    // 2D isolation cut between leptons & AK4 (need AK4 initialized first!)
+        // truth matching
+        if (m_useTruth){
+            cma::DEBUG("EVENT : Truth match muon");
+            m_truthMatchingTool->matchLeptonToTruthTop(mu);
+            if (mu.matchId<0) continue;
+        }
+
+        bool isMedium = (*m_mu_id_medium)->at(i);
+        bool isTight  = (*m_mu_id_tight)->at(i);
+        bool iso      = customIsolation(mu);     // 2D isolation cut between leptons & AK4
 
         bool isGood(mu.p4.Pt()>60 && std::abs(mu.p4.Eta())<2.4 && isMedium && iso);
         if (!isGood) continue;
@@ -362,9 +430,16 @@ void Event::initialize_leptons(){
     for (unsigned int i=0; i<nElectrons; i++){
         Lepton el;
         el.p4.SetPtEtaPhiE( (*m_el_pt)->at(i),(*m_el_eta)->at(i),(*m_el_phi)->at(i),(*m_el_e)->at(i));
-        bool isTightNoIso = (*m_el_id_tight_noIso)->at(i);
 
-        bool iso = customIsolation(el);    // 2D isolation cut between leptons & AK4 (need AK4 initialized first!)
+        // truth matching
+        if (m_useTruth){
+            cma::DEBUG("EVENT : Truth match electron");
+            m_truthMatchingTool->matchLeptonToTruthTop(el);
+            if (el.matchId<0) continue;
+        }
+
+        bool isTightNoIso = (*m_el_id_tight_noIso)->at(i);
+        bool iso = customIsolation(el);                     // 2D isolation cut between leptons & AK4
 
         bool isGood(el.p4.Pt()>60 && std::abs(el.p4.Eta())<2.4 && isTightNoIso && iso);
         if (!isGood) continue;
@@ -388,11 +463,30 @@ void Event::initialize_leptons(){
 }
 
 
+void Event::initialize_kinematics(){
+    /* Kinematics from the event (MET) */
+    m_met.p4.SetPtEtaPhiM(**m_met_met,0.,**m_met_phi,0.);
+
+    // transverse mass of the W (only relevant for 1-lepton)
+    float mtw(0.0);
+    if (m_leptons.size()>0){
+        Lepton lep = m_leptons.at(0);
+        float dphi = m_met.p4.Phi() - lep.p4.Phi();
+        mtw = sqrt( 2 * lep.p4.Pt() * m_met.p4.Pt() * (1-cos(dphi)) );
+    }
+    m_met.mtw = mtw;
+
+    return;
+}
 
 void Event::initialize_weights(){
     /* Event weights */
     m_nominal_weight = 1.0;
-    if (m_isMC) m_nominal_weight = **m_stored_weight; //**m_evtWeight;
+
+    if (m_isMC){
+        m_nominal_weight  = 1.0; //(**m_weight_pileup) * (**m_weight_mc);
+        m_nominal_weight *= (m_xsection) * (m_kfactor) * m_LUMI / (m_sumOfWeights);
+    }
 
     return;
 }
@@ -416,34 +510,85 @@ void Event::deepLearningPrediction(Top& top){
 }
 
 
+bool Event::customIsolation( Lepton& lep ){
+    /* 2D isolation cut for leptons 
+       - Check that the lepton and nearest AK4 jet satisfies
+         DeltaR() < 0.4 || pTrel>25
+    */
+    bool pass(false);
+    //int min_index(-1);                    // index of AK4 closest to lep
+    float drmin(100.0);                   // min distance between lep and AK4s
+    float ptrel(0.0);                     // pTrel between lepton and AK4s
+
+    if (m_jets_iso.size()<1) return false;    // no AK4 -- event will fail anyway
+
+    for (const auto& jet : m_jets_iso){
+        float dr = lep.p4.DeltaR( jet.p4 );
+        if (dr < drmin) {
+            drmin = dr;
+            ptrel = cma::ptrel( lep.p4,jet.p4 );
+            //min_index = jet.index;
+        }
+    }
+
+    lep.drmin = drmin;
+    lep.ptrel = ptrel;
+
+    if (drmin > 0.4 || ptrel > 30) pass = true;
+
+    return pass;
+}
+
+
 // -- clean-up
 void Event::finalize(){
     /* Delete variables used to access information from TTree */
     cma::DEBUG("EVENT : Finalize() ");
-    delete m_PassTrigger;
-    delete m_TriggerNames;
-
-    delete m_BadChargedCandidateFilter;
-    delete m_BadPFMuonFilter;
-    delete m_EcalDeadCellTriggerPrimitiveFilter;
-    delete m_HBHEIsoNoiseFilter;
-    delete m_HBHENoiseFilter;
-    delete m_eeBadScFilter;
-    delete m_globalTightHalo2016Filter;
-    delete m_goodVerticesFilter;
 
     cma::DEBUG("EVENT : Finalize -- Clear Jets");
+    delete m_jet_pt;
+    delete m_jet_eta;
+    delete m_jet_phi;
+    delete m_jet_m;
+    delete m_jet_bdisc;
+    delete m_jet_deepCSV;
+    delete m_jet_area;
+    delete m_jet_uncorrPt;
+    delete m_jet_uncorrE;
+
+    cma::DEBUG("EVENT : Finalize -- Clear leptons");
+    delete m_el_pt;
+    delete m_el_eta;
+    delete m_el_phi;
+    delete m_el_e;
+    delete m_el_charge;
+    delete m_el_id_loose;
+    delete m_el_id_medium;
+    delete m_el_id_tight;
+    delete m_el_id_loose_noIso;
+    delete m_el_id_medium_noIso;
+    delete m_el_id_tight_noIso;
+    delete m_mu_pt;
+    delete m_mu_eta;
+    delete m_mu_phi;
+    delete m_mu_e;
+    delete m_mu_charge;
+    delete m_mu_iso;
+    delete m_mu_id_loose;
+    delete m_mu_id_medium;
+    delete m_mu_id_tight;
 
     if (m_isMC){
       cma::DEBUG("EVENT : Finalize -- Clear MC");
-      delete m_stored_weight;
-
-      delete m_selPDGid;
-      delete m_genDecayIdxVec;
-      delete m_genDecayLVec;
-      delete m_genDecayMomIdxVec;
-      delete m_genDecayMomRefVec;
-      delete m_genDecayPdgIdVec;
+      if (m_config->isTtbar()){
+        delete m_mc_pt;
+        delete m_mc_eta;
+        delete m_mc_phi;
+        delete m_mc_e;
+        delete m_mc_pdgId;
+        delete m_mc_status;
+        delete m_mc_isHadTop;
+      }
     } // end isMC
 
     return;

@@ -59,18 +59,12 @@ class miniTree {
     // Deep learning features
     unsigned int m_target;
 
-    float m_AK4_deepCSVb;
-    float m_AK4_deepCSVbb;
-    float m_AK4_deepCSVc;
-    float m_AK4_deepCSVcc;
-    float m_AK4_deepCSVl;
-    float m_AK4_deepFlavorb;
-    float m_AK4_deepFlavorbb;
-    float m_AK4_deepFlavorc;
-    float m_AK4_deepFlavoruds;
-    float m_AK4_deepFlavorg;
-    float m_AK4_deepFlavorlepb;
-
+    float m_AK4_CSVv2;
+    float m_mass_lep_AK4;
+    float m_deltaR_lep_AK4;
+    float m_ptrel_lep_AK4;
+    float m_deltaPhi_met_AK4;
+    float m_deltaPhi_met_lep;
 
     /**** Metadata ****/
     // which sample has which target value

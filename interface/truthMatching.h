@@ -25,10 +25,13 @@ class truthMatching {
     void setTruthPartons(const std::vector<Parton> truth_partons);
     void setTruthTops(const std::vector<TruthTop> truth_tops);
 
+    void matchLeptonToTruthTop(Lepton& lepton);
     void matchLeptonicTopJet(Jet& jet);
     void matchJetToTruthTop(Jet& jet);
     void matchJetToTruthJet(Jet& jet, const std::vector<Jet>& truth_jets);
+
     void parton_match(const Parton& p, Jet& j, float dR=-1.0);
+    bool parton_match(const Parton& p, Lepton& l, float dR=-1.0);
 
   protected:
 

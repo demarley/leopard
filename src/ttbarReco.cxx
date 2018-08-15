@@ -13,32 +13,30 @@ Tool for performing deep learning tasks
 
 
 ttbarReco::ttbarReco( configuration& cmaConfig ) :
-  m_config(&cmaConfig){
-    m_targetMap = m_config->mapOfTargetValues();
-  }
+  m_config(&cmaConfig){}
 
 ttbarReco::~ttbarReco() {}
 
 
-void ttbarReco::execute(const std::vector<Jet>& jets, const Lepton& lepton){
+void ttbarReco::execute(const std::vector<Jet>& jets, const Lepton& lepton, const MET& met){
     /* Build top quarks system */
     m_ttbar.clear();
 
-    m_jets = jets;
-    m_lepton = lepton;
+    // Combine information into one struct
+    for (const auto& jet : jets){
+        Top top_cand;  // reconstructed top candidates
+        top_cand.jet = jet.index;
+        top_cand.lepton = lepton;
+        top_cand.met    = met;
 
+        // signal if the AK4 comes from the same top quark as the lepton else background
+        unsigned int target(0);
+        if (jet.matchId==lepton.matchId)
+            target = 1;
 
-    // Reconstruct ttbar, define containment
-    bool isTtbar(m_config->isTtbar());
-
-    Top top_cand;  // reconstructed top candidates
-    top_cand.jets.clear();
-
-    for (const auto& jet : ak4candidates){
-        top_cand.jets.push_back(jet.index);
         top_cand.target = target;
         m_ttbar.push_back( top_cand );
-    } // end loop over AK4
+    }
 
     cma::DEBUG("TTBARRECO : Ttbar built ");
 

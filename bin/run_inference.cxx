@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
         TTreeReader myReader(treename.c_str(), file);
 
         // -- Initialize histograms
-        histogrammer4ML histMaker(config,"ML");
+        histogrammer histMaker(config,"ML");
         histMaker.initialize( *outputFile );
 
         // -- Make new Tree in Root file

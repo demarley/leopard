@@ -35,6 +35,25 @@ void truthMatching::setTruthTops(const std::vector<TruthTop> truth_tops){
 }
 
 
+void truthMatching::matchLeptonToTruthTop(Lepton& lepton){
+    /* Match lepton to truth top quark */
+    lepton.matchId = -1;
+
+    for (unsigned int t_idx=0, size=m_truth_tops.size(); t_idx<size; t_idx++){
+        auto truthtop = m_truth_tops.at(t_idx);
+        if (truthtop.isHadronic) continue;
+
+        Parton wdecay0 = m_truth_partons.at( truthtop.Wdecays.at(0) );
+        Parton wdecay1 = m_truth_partons.at( truthtop.Wdecays.at(1) );
+        Parton tlep = (wdecay0.isElectron || wdecay0.isMuon) ? wdecay0 : wdecay1;  // choose electron or muon, not neutrino
+
+        bool ismatched = parton_match(tlep,lepton);    // default DeltaR = 0.2
+        if (ismatched) lepton.matchId = t_idx;
+    }
+
+    return;
+}
+
 void truthMatching::matchLeptonicTopJet(Jet& jet){
     /* Match b from leptonic top decay to AK4 */
     jet.matchId     = -1;
@@ -94,6 +113,17 @@ void truthMatching::matchJetToTruthTop(Jet& jet){
     }
 
     return;
+}
+
+
+bool truthMatching::parton_match(const Parton& p, Lepton& l, float dR){
+    /* Match parton to reconstructed jet
+       @param p    truth parton
+       @param l    reconstructed lepton
+       @param dR   distance measure to use in DeltaR (default = -1)
+    */
+    bool match = (dR > 0) ? cma::deltaRMatch( p.p4, l.p4, dR ) : cma::deltaRMatch( p.p4, l.p4, 0.2 );
+    return match;
 }
 
 

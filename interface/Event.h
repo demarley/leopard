@@ -51,6 +51,8 @@ class Event {
 
     // Setup physics information
     void initialize_jets();
+    void initialize_leptons();
+    void initialize_kinematics();
     void initialize_weights();
     void initialize_truth();
 
@@ -59,14 +61,16 @@ class Event {
     virtual void clear();
 
     // Get physics object(s) information
+    MET met() const {return m_met;}
     std::vector<Jet> jets() const {return m_jets;}
-    Lepton lepton() const {return m_lepton;}
+    std::vector<Lepton> leptons() const {return m_leptons;}
 
     // metadata
     long long entry() {return m_entry;}
     virtual std::string treeName() {return m_treeName;}
 
     // functions to calculate things
+    bool customIsolation(Lepton& lep);
     float DNN(){ return m_DNN;}
 
     void buildTtbar();
@@ -93,8 +97,11 @@ class Event {
     double m_nominal_weight;
 
     // physics object information
-    std::vector<Jet>  m_jets;
-    Lepton m_lepton;
+    std::vector<Jet> m_jets;
+    std::vector<Jet> m_jets_iso;
+    std::vector<Jet> m_ak4candidates;
+    std::vector<Lepton> m_leptons;
+    MET m_met;
 
     // truth physics object information
     std::vector<Parton> m_truth_partons;
@@ -118,89 +125,67 @@ class Event {
 
     // TTree variables [all possible ones]
     // *************
-    // the following are from root files accessed 
-    //    on 5 August 2018
-    //    at root://cmseos.fnal.gov//store/user/lpcsusyhad/Stop_production/Top_ntuple_V9
-    TTreeReaderValue<double> * m_stored_weight;
+    // Truth info
+    TTreeReaderValue<float> * m_weight_mc;
+    TTreeReaderValue<float> * m_weight_pileup;
+    TTreeReaderValue<float> * m_weight_lept_eff;
+    TTreeReaderValue<float> * m_weight_pileup_UP;
+    TTreeReaderValue<float> * m_weight_pileup_DOWN;
 
-    TTreeReaderValue<std::vector<int>> * m_PassTrigger;
-    TTreeReaderValue<std::vector<std::string>> * m_TriggerNames;
+    TTreeReaderValue<std::vector<float>> * m_mc_ht;
+    TTreeReaderValue<std::vector<float>> * m_mc_pt;
+    TTreeReaderValue<std::vector<float>> * m_mc_eta;
+    TTreeReaderValue<std::vector<float>> * m_mc_phi;
+    TTreeReaderValue<std::vector<float>> * m_mc_e;
+    TTreeReaderValue<std::vector<int>> * m_mc_pdgId;
+    TTreeReaderValue<std::vector<int>> * m_mc_status;
+    TTreeReaderValue<std::vector<int>> * m_mc_isHadTop;
+    TTreeReaderValue<std::vector<int>> * m_mc_parent_idx;
+    TTreeReaderValue<std::vector<int>> * m_mc_child0_idx;
+    TTreeReaderValue<std::vector<int>> * m_mc_child1_idx;
 
-    TTreeReaderValue<int> * m_globalTightHalo2016Filter;
-    TTreeReaderValue<int> * m_goodVerticesFilter;
-    TTreeReaderValue<int> * m_eeBadScFilter;
-    TTreeReaderValue<int> * m_EcalDeadCellTriggerPrimitiveFilter;
-    TTreeReaderValue<unsigned int> * m_BadChargedCandidateFilter;
-    TTreeReaderValue<unsigned int> * m_BadPFMuonFilter;
-    TTreeReaderValue<unsigned int> * m_HBHENoiseFilter;
-    TTreeReaderValue<unsigned int> * m_HBHEIsoNoiseFilter;
-    TTreeReaderValue<int> * m_duplicateMuonsFilter;
-    TTreeReaderValue<int> * m_badMuonsFilter;
-    TTreeReaderValue<int> * m_noBadMuonsFilter;
+    // MET
+    TTreeReaderValue<float> * m_met_met;
+    TTreeReaderValue<float> * m_met_phi;
 
-    TTreeReaderValue<int> * m_NJetsISR;
-    TTreeReaderValue<std::vector<TLorentzVector>> * m_ak4LVec;
-    TTreeReaderValue<unsigned int> * m_ak4looseJetID;
-    TTreeReaderValue<unsigned int> * m_ak4tightJetID;
-    TTreeReaderValue<unsigned int> * m_ak4tightlepvetoJetID;
-    TTreeReaderValue<unsigned int> * m_ak4looseJetID_NoLep;
-    TTreeReaderValue<unsigned int> * m_ak4tightJetID_NoLep;
-    TTreeReaderValue<unsigned int> * m_ak4tightlepvetoJetID_NoLep;
-    TTreeReaderValue<std::vector<double>> * m_ak4qgLikelihood;
-    TTreeReaderValue<std::vector<double>> * m_ak4qgPtD;
-    TTreeReaderValue<std::vector<double>> * m_ak4qgAxis1;
-    TTreeReaderValue<std::vector<double>> * m_ak4qgAxis2;
-    TTreeReaderValue<std::vector<int>> * m_ak4qgMult;
-    TTreeReaderValue<std::vector<int>> * m_ak4Flavor;
-    TTreeReaderValue<std::vector<double>> * m_ak4Charge;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepCSV_b;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepCSV_bb;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepCSV_l;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepCSV_c;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepCSV_cc;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepFlavor_b;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepFlavor_bb;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepFlavor_lepb;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepFlavor_c;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepFlavor_uds;
-    TTreeReaderValue<std::vector<double>> * m_ak4deepFlavor_g;
+    // Jet info
+    TTreeReaderValue<std::vector<float>> * m_jet_pt;
+    TTreeReaderValue<std::vector<float>> * m_jet_eta;
+    TTreeReaderValue<std::vector<float>> * m_jet_phi;
+    TTreeReaderValue<std::vector<float>> * m_jet_m;
+    TTreeReaderValue<std::vector<float>> * m_jet_bdisc;
+    TTreeReaderValue<std::vector<float>> * m_jet_deepCSV;
+    TTreeReaderValue<std::vector<float>> * m_jet_area;
+    TTreeReaderValue<std::vector<float>> * m_jet_uncorrPt;
+    TTreeReaderValue<std::vector<float>> * m_jet_uncorrE;
+    TTreeReaderValue<std::vector<float>> * m_jet_jerSF;
+    TTreeReaderValue<std::vector<float>> * m_jet_jerSF_UP;
+    TTreeReaderValue<std::vector<float>> * m_jet_jerSF_DOWN;
 
+    // Leptons
+    TTreeReaderValue<std::vector<float>> * m_el_pt;
+    TTreeReaderValue<std::vector<float>> * m_el_eta;
+    TTreeReaderValue<std::vector<float>> * m_el_phi;
+    TTreeReaderValue<std::vector<float>> * m_el_e;
+    TTreeReaderValue<std::vector<float>> * m_el_charge;
+    TTreeReaderValue<std::vector<float>> * m_el_iso;
+    TTreeReaderValue<std::vector<unsigned int>> * m_el_id_loose;
+    TTreeReaderValue<std::vector<unsigned int>> * m_el_id_medium;
+    TTreeReaderValue<std::vector<unsigned int>> * m_el_id_tight;
+    TTreeReaderValue<std::vector<unsigned int>> * m_el_id_loose_noIso;
+    TTreeReaderValue<std::vector<unsigned int>> * m_el_id_medium_noIso;
+    TTreeReaderValue<std::vector<unsigned int>> * m_el_id_tight_noIso;
 
-    TTreeReaderValue<std::vector<TLorentzVector>> * m_ak8puppiJetsLVec;
-    TTreeReaderValue<std::vector<TLorentzVector>> * m_ak8DeepAK8LVec;
+    TTreeReaderValue<std::vector<float>> * m_mu_pt;
+    TTreeReaderValue<std::vector<float>> * m_mu_eta;
+    TTreeReaderValue<std::vector<float>> * m_mu_phi;
+    TTreeReaderValue<std::vector<float>> * m_mu_e;
+    TTreeReaderValue<std::vector<float>> * m_mu_charge;
+    TTreeReaderValue<std::vector<float>> * m_mu_iso;
+    TTreeReaderValue<std::vector<unsigned int>> * m_mu_id_loose;
+    TTreeReaderValue<std::vector<unsigned int>> * m_mu_id_medium;
+    TTreeReaderValue<std::vector<unsigned int>> * m_mu_id_tight;
 
-    TTreeReaderValue<std::vector<double>> * m_ak8puppiTau1;
-    TTreeReaderValue<std::vector<double>> * m_ak8puppiTau2;
-    TTreeReaderValue<std::vector<double>> * m_ak8puppiTau3;
-    TTreeReaderValue<std::vector<double>> * m_ak8puppiSoftDropMass;
-    TTreeReaderValue<std::vector<double>> * m_ak8SubJetsBdisc;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8JetsDeepAK8;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_puppiSubJetsBdisc;
-
-    TTreeReaderValue<std::vector<std::vector<TLorentzVector>>> * m_ak8puppiSubJetsLVec;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8puppiSubJetsBdisc;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8puppiSubJetMult;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8puppiSubjetPtD;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8puppiSubjetAxis1;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8puppiSubjetAxis2;
-
-    TTreeReaderValue<std::vector<double>> * m_ak8DeepAK8top;
-    TTreeReaderValue<std::vector<double>> * m_ak8DeepAK8W;
-    TTreeReaderValue<std::vector<double>> * m_ak8DeepAK8Z;
-    TTreeReaderValue<std::vector<double>> * m_ak8DeepAK8Zbb;
-    TTreeReaderValue<std::vector<double>> * m_ak8DeepAK8Hbb;
-    TTreeReaderValue<std::vector<double>> * m_ak8DeepAK8H4q;
-    TTreeReaderValue<std::vector<std::vector<double>>> * m_ak8DeepAK8;
-
-
-    TTreeReaderValue<std::vector<int>> * m_selPDGid;
-    TTreeReaderValue<std::vector<TLorentzVector>> * m_genDecayLVec;
-    TTreeReaderValue<std::vector<double>> * m_genMatched;
-    TTreeReaderValue<std::vector<int>> * m_genDecayIdxVec;
-    TTreeReaderValue<std::vector<int>> * m_genDecayPdgIdVec;
-    TTreeReaderValue<std::vector<int>> * m_genDecayMomIdxVec;
-    TTreeReaderValue<std::vector<int>> * m_genDecayMomRefVec;
-    TTreeReaderValue<std::vector<TLorentzVector>> * m_selGenParticle;
 };
 
 #endif

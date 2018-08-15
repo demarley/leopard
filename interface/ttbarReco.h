@@ -16,14 +16,14 @@ class ttbarReco {
 
     ~ttbarReco();
 
-    std::vector<Top> tops(){ return m_tops;}
+    std::vector<Top> tops(){ return m_ttbar;}
     void execute(const std::vector<Jet>& jets, const Lepton& lepton);
 
   protected:
 
     configuration *m_config;
 
-    std::vector<Top> m_tops;
+    std::vector<Top> m_ttbar;
 
     Lepton m_lepton;
     std::vector<Jet> m_jets;

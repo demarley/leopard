@@ -11,6 +11,8 @@
 #include <map>
 #include <string>
 
+// 'containment' for matching jets to partons from tops
+enum tmatch {NONE,BONLY,QONLY,BQ,W,FULL};
 
 
 // base object (consistent reference to TLorentzVector)
@@ -98,6 +100,7 @@ struct Lepton : CmaBase{
     bool isElectron;
     bool isMuon;
     int index;       // index in vector of leptons
+    int matchId;     // record keeping of to which top quark this originated
 
     float drmin;     // distance to closest AK4
     float ptrel;     // relative pT to closest AK4
@@ -112,6 +115,12 @@ struct Lepton : CmaBase{
 };
 
 
+struct MET : CmaBase{
+    // extra MET attributes
+    float mtw;   // transverse mass of W
+};
+
+
 struct Top {
     // Define a top quark
     TLorentzVector p4;
@@ -121,10 +130,9 @@ struct Top {
     bool isTop;
     bool isAntiTop;
 
+    MET met;
     Lepton lepton;
-
-    // contains all associated jets (hadronic or leptonic)
-    std::vector<int> jets;  
+    Jet jet;
 };
 
 

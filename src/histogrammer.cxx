@@ -91,28 +91,16 @@ void histogrammer::bookHists( std::string name ){
     cma::DEBUG("HISTOGRAMMER : Init. histograms: "+name);
 
     // features for DNN
-    for (unsigned int x=0, size=m_targets.size(); x<size; x++){
+    for (unsigned int x=0, size=2; x<size; x++){
         std::string target = std::to_string(x);
 
-        // AK4
-        init_hist("AK4_deepCSVb_"+target+"_"+m_name,  200, -1,1);
-        init_hist("AK4_deepCSVbb_"+target+"_"+m_name, 200, -1,1);
-        init_hist("AK4_deepCSVc_"+target+"_"+m_name,  200, -1,1);
-        init_hist("AK4_deepCSVcc_"+target+"_"+m_name, 200, -1,1);
-        init_hist("AK4_deepCSVl_"+target+"_"+m_name,  200, -1,1);
-        init_hist("AK4_deepFlavorb_"+target+"_"+m_name,   200, -1,1);
-        init_hist("AK4_deepFlavorbb_"+target+"_"+m_name,  200, -1,1);
-        init_hist("AK4_deepFlavorc_"+target+"_"+m_name,   200, -1,1);
-        init_hist("AK4_deepFlavoruds_"+target+"_"+m_name, 200, -1,1);
-        init_hist("AK4_deepFlavorg_"+target+"_"+m_name,   200, -1,1);
-        init_hist("AK4_deepFlavorlepb_"+target+"_"+m_name,200, -1,1);
-
-        init_hist("AK4_charge_"+target+"_"+m_name, 500, -5,5);
-
-        // AK8 + AK4 system
-        init_hist("AK8AK4_deltaR_"+target+"_"+m_name, 50,0,5);
-        init_hist("AK8AK4_mass_"+target+"_"+m_name,  500,0,1000);
-        init_hist("AK8AK4_mass_deltaR_"+target+"_"+m_name,    500,0,1000,50,0,5); // (AK8+AK4).M() vs DeltaR(AK8,AK4)
+        init_hist( "AK4_CSVv2_"+target+"_"+m_name,        200, -1, 1);
+        init_hist( "mass_lep_AK4_"+target+"_"+m_name,     500,  0, 500);
+        init_hist( "deltaR_lep_AK4_"+target+"_"+m_name,   500,  0, 5);
+        init_hist( "ptrel_lep_AK4_"+target+"_"+m_name,    500,  0, 500);
+        init_hist( "deltaPhi_met_AK4_"+target+"_"+m_name,  64,-3.2,3.2);
+        init_hist( "deltaPhi_met_lep_"+target+"_"+m_name,  64,-3.2,3.2);
+    }
 
     return;
 }
@@ -163,15 +151,15 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
 
     cma::DEBUG("HISTOGRAMMER : event weight = "+std::to_string(event_weight) );
 
-        cma::DEBUG("HISTOGRAMMER : Fill small-R jets");
-        fill("n_jets_"+name, jets.size(), event_weight );
+    for (const auto& top : tops){
+        std::string target = std::to_string(top.target);
 
-        for (const auto& jet : jets){
-            fill("jet_pt_"+name,  jet.p4.Pt(),   event_weight);
-            fill("jet_eta_"+name, jet.p4.Eta(),  event_weight);
-            fill("jet_phi_"+name, jet.p4.Phi(),  event_weight);
-            fill("jet_bdisc_"+name, jet.bdisc, event_weight);
-        }
+        fill( "AK4_CSVv2_"+target+"_"+m_name,        features.at("AK4_CSVv2"),      event_weight);
+        fill( "mass_lep_AK4_"+target+"_"+m_name,     features.at("mass_lep_AK4"),   event_weight);
+        fill( "deltaR_lep_AK4_"+target+"_"+m_name,   features.at("deltaR_lep_AK4"), event_weight);
+        fill( "ptrel_lep_AK4_"+target+"_"+m_name,    features.at("ptrel_lep_AK4"),  event_weight);
+        fill( "deltaPhi_met_AK4_"+target+"_"+m_name, features.at("deltaPhi_met_AK4"), event_weight);
+        fill( "deltaPhi_met_lep_"+target+"_"+m_name, features.at("deltaPhi_met_lep"), event_weight);
     }
 
     cma::DEBUG("HISTOGRAMMER : End histograms");

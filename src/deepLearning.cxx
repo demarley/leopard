@@ -55,23 +55,18 @@ void deepLearning::loadFeatures(const Top& top){
     // feature calculations
     m_dnnInputs["target"] = top.target;
 
+    Jet jet = top.jet;
+    MET met = top.met;
     Lepton lep = top.lepton;
-    Jet jet = m_jets.at( top.jets.at(0) );
 
-    m_dnnInputs["AK4_deepCSVb"]  = jet.deepCSVb;
-    m_dnnInputs["AK4_deepCSVbb"] = jet.deepCSVbb;
-    m_dnnInputs["AK4_deepCSVc"]  = jet.deepCSVc;
-    m_dnnInputs["AK4_deepCSVcc"] = jet.deepCSVcc;
-    m_dnnInputs["AK4_deepCSVl"]  = jet.deepCSVl;
+    m_["AK4_CSVv2"]      = jet.bDisc;
+    m_["mass_lep_AK4"]   = (jet.p4+lep.p4).M();
+    m_["deltaR_lep_AK4"] = jet.p4.DeltaR(lep.p4);
+    m_["ptrel_lep_AK4"]  = ptrel( jet,lep );
+    m_["deltaPhi_met_AK4"] = jet.p4.DeltaPhi(met.p4);
+    m_["deltaPhi_met_lep"] = lep.p4.DeltaPhi(met.p4);
 
-    m_dnnInputs["AK4_deepFlavorb"]  = jet.deepFlavorb;
-    m_dnnInputs["AK4_deepFlavorbb"] = jet.deepFlavorbb;
-    m_dnnInputs["AK4_deepFlavorc"]  = jet.deepFlavorc;
-    m_dnnInputs["AK4_deepFlavorg"]  = jet.deepFlavorg;
-    m_dnnInputs["AK4_deepFlavoruds"]  = jet.deepFlavoruds;
-    m_dnnInputs["AK4_deepFlavorlepb"] = jet.deepFlavorlepb;
-
-    m_dnnInputs["weight"] = 1. / (ljet.p4 + jet.p4).Pt();  // 1/ljet.p4.Pt() or something
+    m_dnnInputs["weight"] = 1. / (lep.p4 + jet.p4).Pt();  // 1/ljet.p4.Pt() or something
 
     cma::DEBUG("EVENT : Set DNN input values ");
 

@@ -74,11 +74,6 @@ class configuration {
     bool DNNinference(){ return m_DNNinference;}
     std::string dnnKey(){ return m_dnnKey;}   // key for lwtnn
 
-    // Reco/Truth event loops
-    std::map<std::string,int> mapOfPartonContainment() {return m_containmentMap;}
-    std::map<int,std::string> mapOfPartonContainmentRev() {return m_containmentMapRev;}
-    std::map<std::string,int> mapOfTargetValues() {return m_targetMap;}
-
   protected:
 
     void check_btag_WP(const std::string &wkpt);

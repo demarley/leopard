@@ -40,26 +40,16 @@ void miniTree::initialize(TFile& outputFile) {
     m_ttree->Branch( "target", &m_target, "target/I" );  // target value (.e.g, 0 or 1)
 
     // AK4
-    m_ttree->Branch( "AK4_deepCSVb",  &m_AK4_deepCSVb,  "AK4_deepCSVb/F ");
-    m_ttree->Branch( "AK4_deepCSVbb", &m_AK4_deepCSVbb, "AK4_deepCSVbb/F ");
-    m_ttree->Branch( "AK4_deepCSVc",  &m_AK4_deepCSVc,  "AK4_deepCSVc/F ");
-    m_ttree->Branch( "AK4_deepCSVcc", &m_AK4_deepCSVcc, "AK4_deepCSVcc/F ");
-    m_ttree->Branch( "AK4_deepCSVl",  &m_AK4_deepCSVl,  "AK4_deepCSVl/F ");
-    m_ttree->Branch( "AK4_deepFlavorb",   &m_AK4_deepFlavorb,   "AK4_deepFlavorb/F ");
-    m_ttree->Branch( "AK4_deepFlavorbb",  &m_AK4_deepFlavorbb,  "AK4_deepFlavorbb/F ");
-    m_ttree->Branch( "AK4_deepFlavorc",   &m_AK4_deepFlavorc,   "AK4_deepFlavorc/F ");
-    m_ttree->Branch( "AK4_deepFlavoruds", &m_AK4_deepFlavoruds, "AK4_deepFlavoruds/F ");
-    m_ttree->Branch( "AK4_deepFlavorg",   &m_AK4_deepFlavorg,   "AK4_deepFlavorg/F ");
-    m_ttree->Branch( "AK4_deepFlavorlepb",&m_AK4_deepFlavorlepb,"AK4_deepFlavorlepb/F ");
-    m_ttree->Branch( "AK4_charge", &m_AK4_charge, "AK4_charge/F" );
-
+    m_ttree->Branch( "AK4_CSVv2",        &m_AK4_CSVv2,        "AK4_CSVv2/F" );
+    m_ttree->Branch( "mass_lep_AK4",     &m_mass_lep_AK4,     "mass_lep_AK4/F" );
+    m_ttree->Branch( "deltaR_lep_AK4",   &m_deltaR_lep_AK4,   "deltaR_lep_AK4/F" );
+    m_ttree->Branch( "ptrel_lep_AK4",    &m_ptrel_lep_AK4,    "ptrel_lep_AK4/F" );
+    m_ttree->Branch( "deltaPhi_met_AK4", &m_deltaPhi_met_AK4, "deltaPhi_met_AK4/F" );
+    m_ttree->Branch( "deltaPhi_met_lep", &m_deltaPhi_met_lep, "deltaPhi_met_lep/F" );
 
     /**** Metadata ****/
-    // which sample has which target value
-    // many ROOT files will be merged together to do the training
     m_metadataTree->Branch( "name",    &m_name );
-    m_metadataTree->Branch( "target",  &m_target_value,  "target/I" );
-    m_metadataTree->Branch( "nEvents", &m_nEvents,       "nEvents/I" );
+    m_metadataTree->Branch( "nEvents", &m_nEvents, "nEvents/I" );
 
     return;
 } // end initialize
@@ -79,21 +69,12 @@ void miniTree::saveEvent(const std::map<std::string,double> features) {
     m_target = features.at("target");
 
     cma::DEBUG("MINITREE : Save event2a ");
-    m_AK4_deepCSVb  = features.at("AK4_deepCSVb");
-    m_AK4_deepCSVbb = features.at("AK4_deepCSVbb");
-    m_AK4_deepCSVc  = features.at("AK4_deepCSVc");
-    m_AK4_deepCSVcc = features.at("AK4_deepCSVcc");
-    m_AK4_deepCSVl  = features.at("AK4_deepCSVl");
-
-    cma::DEBUG("MINITREE : Save event2b ");
-    m_AK4_deepFlavorb  = features.at("AK4_deepFlavorb");
-    m_AK4_deepFlavorbb = features.at("AK4_deepFlavorbb");
-    m_AK4_deepFlavorc  = features.at("AK4_deepFlavorc");
-    m_AK4_deepFlavorg  = features.at("AK4_deepFlavorg");
-    m_AK4_deepFlavoruds  = features.at("AK4_deepFlavoruds");
-    m_AK4_deepFlavorlepb = features.at("AK4_deepFlavorlepb");
-
-    m_AK4_charge = features.at("AK4_charge");
+    m_AK4_CSVv2      = features.at("AK4_CSVv2");
+    m_mass_lep_AK4   = features.at("mass_lep_AK4");
+    m_deltaR_lep_AK4 = features.at("deltaR_lep_AK4");
+    m_ptrel_lep_AK4  = features.at("ptrel_lep_AK4");
+    m_deltaPhi_met_AK4 = features.at("deltaPhi_met_AK4");
+    m_deltaPhi_met_lep = features.at("deltaPhi_met_lep");
 
     /**** Fill the tree ****/
     cma::DEBUG("MINITREE : Fill the tree");
@@ -107,7 +88,6 @@ void miniTree::finalize(){
     /* Finalize the class -- fill in the metadata (only need to do this once!) */
     m_name    = m_config->primaryDataset();
     m_nEvents = m_config->NTotalEvents();
-    m_target_value = (m_config->isQCD()) ? 0 : -1;    // multiple classes for signal, choose '-1'
 
     cma::DEBUG("MINITREE : Fill the metadata tree");
     m_metadataTree->Fill();
