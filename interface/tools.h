@@ -64,6 +64,9 @@ namespace cma{
     /* DeltaR matching of TLorentzVectors (default deltaR=0.75) */
     bool deltaRMatch( const TLorentzVector &particle1, const TLorentzVector &particle2, const double deltaR=0.75 );
 
+    /* Relative pT between two objects */
+    float ptrel( const TLorentzVector& a, const TLorentzVector& b);
+
     /* Calculate the median of a vector */
     template<typename T>
     T median( std::vector<T> scores ) {

@@ -16,8 +16,6 @@ histogrammer::histogrammer( configuration& cmaConfig, std::string name ) :
   m_config(&cmaConfig),
   m_name(name),
   m_isMC(false),
-  m_useLargeRJets(false),
-  m_useJets(false),
   m_putOverflowInLastBin(true),
   m_putUnderflowInFirstBin(true){
     m_map_histograms1D.clear();
@@ -128,39 +126,32 @@ void histogrammer::fill( Event& event ){
     /* Fill histograms -- fill histograms based on treename or systematic weights ("nominal" but different weight)
        This is the function to modify / inherit for analysis-specific purposes
     */
+    cma::DEBUG("HISTOGRAMMER : Fill histograms: ");
     std::string treeName = event.treeName();
     double event_weight  = event.nominal_weight();
-
     fill( m_name+treeName, event, event_weight );
-
-    // for different event weights, e.g., systematics,
-    // put other calls to fill() here with that change
-
     return;
 }
-
 
 void histogrammer::fill( const std::string& name, Event& event, double event_weight){
     /* Fill histograms -- just use information from the event and fill histogram
        This is the function to modify / inherit for analysis-specific purposes
     */
-    cma::DEBUG("HISTOGRAMMER : Fill histograms: "+name+".");
+    return;
+}
 
-    // Load some objects from Event
-    std::vector<Top> tops = event.ttbar();  // reconstructed ttbar system
+void histogrammer::fill( const std::map<std::string,double> features, double weight ){
+    /* Fill histograms -- from map */
+    cma::DEBUG("HISTOGRAMMER : Fill histograms: "+m_name+".");
 
-    cma::DEBUG("HISTOGRAMMER : event weight = "+std::to_string(event_weight) );
+    std::string target = std::to_string(features.at("target"));
 
-    for (const auto& top : tops){
-        std::string target = std::to_string(top.target);
-
-        fill( "AK4_CSVv2_"+target+"_"+m_name,        features.at("AK4_CSVv2"),      event_weight);
-        fill( "mass_lep_AK4_"+target+"_"+m_name,     features.at("mass_lep_AK4"),   event_weight);
-        fill( "deltaR_lep_AK4_"+target+"_"+m_name,   features.at("deltaR_lep_AK4"), event_weight);
-        fill( "ptrel_lep_AK4_"+target+"_"+m_name,    features.at("ptrel_lep_AK4"),  event_weight);
-        fill( "deltaPhi_met_AK4_"+target+"_"+m_name, features.at("deltaPhi_met_AK4"), event_weight);
-        fill( "deltaPhi_met_lep_"+target+"_"+m_name, features.at("deltaPhi_met_lep"), event_weight);
-    }
+    fill( "AK4_CSVv2_"+target+"_"+m_name,        features.at("AK4_CSVv2"),      weight);
+    fill( "mass_lep_AK4_"+target+"_"+m_name,     features.at("mass_lep_AK4"),   weight);
+    fill( "deltaR_lep_AK4_"+target+"_"+m_name,   features.at("deltaR_lep_AK4"), weight);
+    fill( "ptrel_lep_AK4_"+target+"_"+m_name,    features.at("ptrel_lep_AK4"),  weight);
+    fill( "deltaPhi_met_AK4_"+target+"_"+m_name, features.at("deltaPhi_met_AK4"), weight);
+    fill( "deltaPhi_met_lep_"+target+"_"+m_name, features.at("deltaPhi_met_lep"), weight);
 
     cma::DEBUG("HISTOGRAMMER : End histograms");
 

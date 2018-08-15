@@ -218,6 +218,19 @@ bool deltaRMatch( const TLorentzVector &particle1, const TLorentzVector &particl
 }
 
 
+float ptrel( const TLorentzVector& a, const TLorentzVector& b){
+    /* pTrel between two objects 
+       - https://github.com/UHH2/UHH2/blob/master/common/src/Utils.cxx#L34
+    */
+    TVector3 a3 = a.Vect();
+    TVector3 b3 = b.Vect();
+
+    float pt_rel = a3.Cross(b3).Mag()/b3.Mag();
+
+    return pt_rel;
+}
+
+
 std::string m_debugLevel = "SetMe";
 void setVerboseLevel( const std::string& verboseLevel ) {
     m_debugLevel = verboseLevel;

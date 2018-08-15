@@ -95,6 +95,10 @@ class Event {
 
     // event weight information
     double m_nominal_weight;
+    double m_xsection;
+    double m_kfactor;
+    double m_sumOfWeights;
+    double m_LUMI;
 
     // physics object information
     std::vector<Jet> m_jets;

@@ -25,7 +25,7 @@ void ttbarReco::execute(const std::vector<Jet>& jets, const Lepton& lepton, cons
     // Combine information into one struct
     for (const auto& jet : jets){
         Top top_cand;  // reconstructed top candidates
-        top_cand.jet = jet.index;
+        top_cand.jet    = jet;
         top_cand.lepton = lepton;
         top_cand.met    = met;
 

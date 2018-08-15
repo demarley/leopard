@@ -18,20 +18,27 @@ enum tmatch {NONE,BONLY,QONLY,BQ,W,FULL};
 // base object (consistent reference to TLorentzVector)
 struct CmaBase {
     TLorentzVector p4;
+    bool isGood;
 };
 
 
 // Truth information
 struct Parton : CmaBase {
     int pdgId;
+    int status;
     int index;       // index in vector of truth partons
     int decayIdx;    // index in truth record
     int parent_ref;  // index in truth vector of parent
     int parent_idx;  // index in truth record of parent
-    int top_index;   // index in truth_tops if this is a top
-    int containment; // record value used to calculate containment
+    int child0_idx;  // index in truth record of child0
+    int child1_idx;  // index in truth record of child1
+    int containment;
+    int top_index;   // index of parton in the truth_top vector
 
     // Heavy Object Booleans
+    bool isWprime;
+    bool isVLQ;
+
     bool isTop;
     bool isW;
     bool isZ;
@@ -79,6 +86,14 @@ struct Jet : CmaBase {
     std::vector<int> truth_partons;  // vector containing partons that are truth-matched to jet
     int matchId;    // keep track of jets matched to top or anti-top
 
+    float area;      // area of jet (needed to redo JEC)
+    float uncorrPt;  // area of jet (needed to redo JEC)
+    float uncorrE;   // area of jet (needed to redo JEC)
+    float jerSF;     // JER smearing for MC
+    float jerSF_UP;
+    float jerSF_DOWN;
+
+    float deepCSV;
     float deepCSVb;
     float deepCSVbb;
     float deepCSVc;

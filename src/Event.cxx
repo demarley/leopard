@@ -373,7 +373,7 @@ void Event::initialize_jets(){
             if (m_useTruth){
                 cma::DEBUG("EVENT : Truth match AK4 jets");
                 m_truthMatchingTool->matchLeptonicTopJet(jet);
-                if (jet.containment!=0) m_ak4candidates.push_back(jet.index);
+                if (jet.containment!=0) m_ak4candidates.push_back(jet);
             }
 
             idx++;

@@ -110,9 +110,6 @@ void configuration::initialize() {
     m_customFileEnding = getConfigOption("customFileEnding");
     m_cutsfile         = getConfigOption("cutsfile");
     m_useTruth         = cma::str2bool( getConfigOption("useTruth") );
-    m_useJets          = cma::str2bool( getConfigOption("useJets") );
-    m_useLargeRJets    = cma::str2bool( getConfigOption("useLargeRJets") );
-    m_usePUPPI         = cma::str2bool( getConfigOption("usePUPPI") );
     m_makeNewFile      = cma::str2bool( getConfigOption("makeNewFile") );
     m_makeHistograms   = cma::str2bool( getConfigOption("makeHistograms") );
     m_dnnFile          = getConfigOption("dnnFile");

@@ -17,7 +17,7 @@ class ttbarReco {
     ~ttbarReco();
 
     std::vector<Top> tops(){ return m_ttbar;}
-    void execute(const std::vector<Jet>& jets, const Lepton& lepton);
+    void execute(const std::vector<Jet>& jets, const Lepton& lepton, const MET& met);
 
   protected:
 

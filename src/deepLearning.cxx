@@ -59,12 +59,12 @@ void deepLearning::loadFeatures(const Top& top){
     MET met = top.met;
     Lepton lep = top.lepton;
 
-    m_["AK4_CSVv2"]      = jet.bDisc;
-    m_["mass_lep_AK4"]   = (jet.p4+lep.p4).M();
-    m_["deltaR_lep_AK4"] = jet.p4.DeltaR(lep.p4);
-    m_["ptrel_lep_AK4"]  = ptrel( jet,lep );
-    m_["deltaPhi_met_AK4"] = jet.p4.DeltaPhi(met.p4);
-    m_["deltaPhi_met_lep"] = lep.p4.DeltaPhi(met.p4);
+    m_dnnInputs["AK4_CSVv2"]      = jet.bdisc;
+    m_dnnInputs["mass_lep_AK4"]   = (jet.p4+lep.p4).M();
+    m_dnnInputs["deltaR_lep_AK4"] = jet.p4.DeltaR(lep.p4);
+    m_dnnInputs["ptrel_lep_AK4"]  = cma::ptrel( jet.p4,lep.p4 );
+    m_dnnInputs["deltaPhi_met_AK4"] = jet.p4.DeltaPhi(met.p4);
+    m_dnnInputs["deltaPhi_met_lep"] = lep.p4.DeltaPhi(met.p4);
 
     m_dnnInputs["weight"] = 1. / (lep.p4 + jet.p4).Pt();  // 1/ljet.p4.Pt() or something
 

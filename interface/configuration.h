@@ -67,6 +67,7 @@ class configuration {
     std::string metadataFile(){ return m_metadataFile;}
     std::map<std::string,Sample> mapOfSamples(){return m_mapOfSamples;}
     Sample sample(){return m_mapOfSamples.at(m_primaryDataset);}
+    float LUMI(){ return m_lumi;}
 
     // DNN
     std::string dnnFile(){ return m_dnnFile;}
@@ -108,6 +109,7 @@ class configuration {
     std::string m_dnnFile;
     std::string m_dnnKey;
 
+    float m_lumi = 35900;
     std::vector<std::string> m_filesToProcess;
     std::map<std::string,Sample> m_mapOfSamples;  // map of Sample structs
 

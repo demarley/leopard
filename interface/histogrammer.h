@@ -46,7 +46,7 @@ class histogrammer {
     virtual void fill( const std::string& name, Event& event, double event_weight );
     virtual void fill( const std::string& name, const double& value, const double& weight );
     virtual void fill( const std::string& name, const double& xvalue, const double& yvalue, const double& weight );
-    void fill( const std::map<std::string,double> top, double weight=1.0 );
+    virtual void fill( const std::map<std::string,double> top, double weight=1.0 );
 
     /* Put over/underflow in last/first bins.  Called from outside macro */
     virtual void overUnderFlow();
