@@ -136,7 +136,7 @@ bool eventSelection::applySelection(const Event &event) {
     fillCutflows(first_bin);
 
     // Access event information
-    std::vector<Jet> jets   = event.jets();
+    std::vector<Jet> jets = event.jets();
     std::vector<Lepton> leptons = event.leptons();
 
 

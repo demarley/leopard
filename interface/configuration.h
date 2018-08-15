@@ -43,7 +43,8 @@ class configuration {
     std::string treename(){ return m_treename;}
 
     // functions about the file
-    virtual void inspectFile( TFile& file );
+    void readMetadata(TFile& file,const std::string& metadataTreeName);
+    virtual void inspectFile( TFile& file, const std::string& metadataTreeName="" );
     std::vector<std::string> filesToProcess(){ return m_filesToProcess;}
     void setFilename(std::string fileName);
     std::string filename(){ return m_filename;}
@@ -66,7 +67,7 @@ class configuration {
     // information for event weights
     std::string metadataFile(){ return m_metadataFile;}
     std::map<std::string,Sample> mapOfSamples(){return m_mapOfSamples;}
-    Sample sample(){return m_mapOfSamples.at(m_primaryDataset);}
+    Sample sample() {return m_sample;}
     float LUMI(){ return m_lumi;}
 
     // DNN
@@ -85,8 +86,14 @@ class configuration {
     bool m_isMC;
     bool m_isQCD;
     bool m_isTtbar;
+    bool m_isWjets;
+    bool m_isSingleTop;
+    bool m_isDiboson;
+    bool m_isZjets;
+    bool m_isSignal;
     bool m_useTruth;
     bool m_fileInspected;
+    bool m_recalculateMetadata;
 
     // return some values from config file
     std::string m_selection;
@@ -111,18 +118,9 @@ class configuration {
 
     float m_lumi = 35900;
     std::vector<std::string> m_filesToProcess;
+    Sample m_sample;                              // struct of information for current sample
     std::map<std::string,Sample> m_mapOfSamples;  // map of Sample structs
 
-    // Samples primary dataset names
-    std::vector<std::string> m_ttbarFiles = {
-      "TTToSemilepton_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8",
-      "TTJets_SingleLeptFromT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-      "TTJets_SingleLeptFromTbar_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-      "TTJets_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-      "TTJets_HT-1200to2500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-      "TTJets_HT-600to800_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-      "TTJets_HT-2500toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-      "TTJets_HT-800to1200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"}; // possible Ttbar files
 
     std::map<std::string,std::string> m_defaultConfigs = {
              {"useTruth",              "false"},

@@ -22,9 +22,6 @@ histogrammer::histogrammer( configuration& cmaConfig, std::string name ) :
     m_map_histograms2D.clear();
 
     m_isMC = m_config->isMC();
-
-    if (m_name.length()>0  && m_name.substr(m_name.length()-1,1).compare("_")!=0)
-        m_name = m_name+"_"; // add '_' to end of string, if needed
   }
 
 histogrammer::~histogrammer() {}
@@ -124,8 +121,7 @@ void histogrammer::fill( const std::map<std::string,double> features, double wei
     /* Fill histograms -- from map */
     cma::DEBUG("HISTOGRAMMER : Fill histograms: "+m_name+".");
 
-    std::string target = std::to_string(features.at("target"));
-
+    std::string target = std::to_string( int(features.at("target")) );
     fill( "AK4_CSVv2_"+target+"_"+m_name,        features.at("AK4_CSVv2"),      weight);
     fill( "mass_lep_AK4_"+target+"_"+m_name,     features.at("mass_lep_AK4"),   weight);
     fill( "deltaR_lep_AK4_"+target+"_"+m_name,   features.at("deltaR_lep_AK4"), weight);

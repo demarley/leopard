@@ -1,7 +1,3 @@
-useJets true
-useLeptons true
-useLargeRJets true
-useNeutrinos false
 useTruth true
 makeNewFile true
 makeHistograms true
@@ -11,9 +7,8 @@ selection training
 output_path ./
 cutsfile config/cuts_training.txt
 inputfile config/listOfFiles.txt
-treename stopTreeMaker/AUX
+treename tree/eventVars
 DNNtraining true
 firstEvent 0
 NEvents -1
-usePUPPI false
 verboseLevel INFO

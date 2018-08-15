@@ -103,9 +103,15 @@ int main(int argc, char** argv) {
 
 
         config.setFilename( filename );   // Use the filename to determine primary dataset and information about the sample
-        config.inspectFile( *file );      // Determine information about the input file (metadata)
-        Sample s = config.sample();       // load the Sample struct (xsection,kfactor,etc)
 
+        std::string metadata_treename("tree/metadata");     // hard-coded for now
+        std::vector<std::string> metadata_names;
+        cma::split(metadata_treename, '/', metadata_names);
+        if (std::find(fileKeys.begin(), fileKeys.end(), metadata_treename) == fileKeys.end())
+            metadata_treename = "";  // metadata TTree doesn't exist, set this so "config" won't look for it
+        config.inspectFile( *file,metadata_treename );      // check the type of file being processed
+
+        Sample s = config.sample();       // load the Sample struct (xsection,kfactor,etc)
 
         // -- Output file -- //
         // For each event selection, make a new output directory

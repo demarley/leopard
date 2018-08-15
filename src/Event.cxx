@@ -273,29 +273,49 @@ void Event::initialize_truth(){
             t_idx++;
         }
         else if (!parton.isTop && parton.parent_idx>0) {
-            int parent_pdgid = (*m_mc_pdgId)->at(parton.parent_idx);
-            cma::DEBUG("EVENT : it's not a top, it's a "+std::to_string(pdgId)+"; parent idx = "+std::to_string(parton.parent_idx)+"; parent pdgid = "+std::to_string(parent_pdgid));
+            int parent_pdgid  = (*m_mc_pdgId)->at(parton.parent_idx);
+            int parent_status = (*m_mc_status)->at(parton.parent_idx);
+            cma::DEBUG("EVENT : it's not a top, it's a "+std::to_string(pdgId)
+                       +"; parent idx = "+std::to_string(parton.parent_idx)
+                       +"; parent pdgid = "+std::to_string(parent_pdgid));
 
             // check if W is decaying to itself
-            if (std::abs(parent_pdgid) == 24 && parent_pdgid == parton.pdgId) {// look at grandparent
-                int gparent_idx = (*m_mc_parent_idx)->at(parton.parent_idx);
-                parent_pdgid = (*m_mc_pdgId)->at(gparent_idx);
-            }
+            if (std::abs(parent_pdgid) == 24 && parent_pdgid == parton.pdgId) {
+                bool selfdecay(true);
+                int parton_pdgId = parton.pdgId;
+                int parton_parent_idx = parton.parent_idx;
+                while (selfdecay){
+                    if (std::abs(parent_pdgid)==24 && parent_pdgid==parton_pdgId) {
+                        int gparent_idx = (*m_mc_parent_idx)->at(parton_parent_idx);
+                        // reset parton
+                        parton_pdgId  = parent_pdgid;
+                        parton_parent_idx = gparent_idx;
+                        // reset parent
+                        parent_pdgid  = (*m_mc_pdgId)->at(gparent_idx);
+                        parent_status = (*m_mc_status)->at(gparent_idx);
+                    }
+                    else selfdecay=false;
+                }
+            } // end check for W self-decaying
             else if (parent_pdgid==parton.pdgId) continue;    // other particles self-decaying, just skip
 
             // get the parent from the list of partons
             Parton parent;
             int top_index(-1);
+            unsigned int ptind(0);
             for (const auto& t : m_truth_partons){
-                if (t.pdgId==parent_pdgid) {
+                if (t.pdgId==parent_pdgid && t.status==parent_status) {
                     parent    = t;
                     top_index = t.top_index;
                     break;
                 }
+                ptind++;
             }
             if (top_index<0) continue;    // weird element in truth record, just skip it
             parton.top_index = top_index;
+
             cma::DEBUG("EVENT : Top index = "+std::to_string(top_index));
+            cma::DEBUG("EVENT : - isW?    = "+std::to_string(parent.isW));
 
             // Parent is Top (W or b)
             if (parent.isTop){
@@ -458,6 +478,8 @@ void Event::initialize_leptons(){
 
         m_leptons.push_back(el);
     }
+
+    cma::DEBUG("EVENT : Number of leptons = "+std::to_string(m_leptons.size()));
 
     return;
 }

@@ -68,7 +68,6 @@ void miniTree::saveEvent(const std::map<std::string,double> features) {
 
     m_target = features.at("target");
 
-    cma::DEBUG("MINITREE : Save event2a ");
     m_AK4_CSVv2      = features.at("AK4_CSVv2");
     m_mass_lep_AK4   = features.at("mass_lep_AK4");
     m_deltaR_lep_AK4 = features.at("deltaR_lep_AK4");

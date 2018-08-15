@@ -149,22 +149,36 @@ void getSampleWeights( std::string metadata_file,
     /* Calculate XSection, KFactor, NEvents, and sum of weights (AMI) */
     cma::INFO("TOOLS : Get sample weights (including sum of weights)");
 
-    std::ifstream in( metadata_file.c_str());
-    if (!in) cma::WARNING("TOOLS : File does not exist: "+metadata_file);
+    // get the absolute path (in case of batch job)
+    char* cma_path = getenv("LEOPARDDIR");
+    std::string cma_absPath("");
+    if (cma_path==NULL){
+        cma::WARNING("TOOLS : environment variable 'CYMINIANADIR' is not set." );
+        cma::WARNING("TOOLS : Relative paths will be used " );
+        cma_absPath = "./";
+    }
+    else cma_absPath = cma_path;
+
+    std::ifstream in( (cma_absPath+"/"+metadata_file).c_str());
+    if (!in) cma::WARNING("TOOLS : File does not exist: "+cma_absPath+"/"+metadata_file);
 
     std::string line;
     samples.clear();
     while( std::getline(in,line) ) {
 
         if (!line.empty() && line[0]!='#') {
+            std::string stype("");
             std::string dsid("");
-            unsigned int NEvents;
-            float xSect,kFact,sumWeights;
+            unsigned int NEvents(1);
+            float xSect(1);
+            float kFact(1);
+            float sumWeights(1);
 
             std::istringstream istr(line);
-            istr >> dsid >> xSect >> sumWeights >> kFact >> NEvents;
+            istr >> stype >> dsid >> xSect >> sumWeights >> kFact >> NEvents;
 
             Sample s;
+            s.sampleType     = stype;
             s.primaryDataset = dsid;
             s.XSection       = xSect;
             s.KFactor        = kFact;

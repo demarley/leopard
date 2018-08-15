@@ -20,6 +20,7 @@ configuration::configuration(const std::string &configFile) :
   m_isTtbar(false),
   m_useTruth(false),
   m_fileInspected(false),
+  m_recalculateMetadata(false),
   m_selection("SetMe"),
   m_cutsfile("SetMe"),
   m_treename("SetMe"),
@@ -161,26 +162,115 @@ std::string configuration::getConfigOption( std::string item ){
 }
 
 
-void configuration::inspectFile( TFile& file ){
-    /* Compare filenames to determine file type */
-    m_fileInspected = true;
-    m_isTtbar = false;
+void configuration::readMetadata(TFile& file,const std::string& metadataTreeName){
+    /* Read metadata TTree */
+    m_sample.clear();
     m_primaryDataset = "";
-    m_NTotalEvents = 0;
+    m_NTotalEvents   = 1;
 
-    // check if file is ttbar
-    for (const auto& ttbar : m_ttbarFiles){
-        m_isTtbar = (m_filename.find(ttbar)!=std::string::npos);
-        m_primaryDataset = ttbar;
-        if (m_isTtbar) break;
+    if (metadataTreeName.size()<1) return;  // no metadata tree to read
+
+    TTreeReader metadata(metadataTreeName.c_str(), &file);
+
+    TTreeReaderValue<std::string> primaryDataset(metadata, "primaryDataset");
+    TTreeReaderValue<float> xsection(metadata, "xsection");
+    TTreeReaderValue<float> kfactor(metadata,  "kfactor");
+    TTreeReaderValue<float> sumOfWeights(metadata,   "sumOfWeights");
+    TTreeReaderValue<unsigned int> NEvents(metadata, "NEvents");
+
+    metadata.Next();
+
+    std::string pd  = *primaryDataset;
+    std::size_t pos = pd.find_first_of("/");
+
+    bool pd_in_map = m_mapOfSamples.find(pd)!=m_mapOfSamples.end();    // check if the primary dataset exists in our map
+    Sample this_sample;
+    if (pd_in_map)
+        this_sample = m_mapOfSamples.at(pd);
+
+    if (pos==0){
+        // bad name for metadata -- need to use map to get metadata
+        // given something like '/ttbar/run2/.../', want 'ttbar'
+        m_recalculateMetadata = true;
+        std::size_t found = pd.find_first_of("/",pos+1);
+        pd = pd.substr(pos+1,found-1);
+
+        if (!pd_in_map) return;
+        m_sample = this_sample;
+
+        m_primaryDataset = m_sample.primaryDataset;
+        m_NTotalEvents   = m_sample.NEvents;
+    }
+    else{
+        m_recalculateMetadata = false;    // first assume the information in the root file (metadata tree) is good to use
+
+        m_sample.sampleType = "data";     // not storing sample type in metadata tree, need metadata file (default: data)
+        m_sample.primaryDataset = pd;
+        m_sample.XSection = *xsection;
+        m_sample.KFactor  = *kfactor;
+        m_sample.NEvents  = *NEvents;
+        m_sample.sumOfWeights = *sumOfWeights;
+
+        if (pd_in_map){
+            m_sample.sampleType = this_sample.sampleType;  // reset to value in the metadatafile (data not in metadata file)
+
+            // check if the metadata in the file can be trusted (compare with the text file)
+            float xsec_diff = (this_sample.XSection - *xsection) / this_sample.XSection;
+            float sumw_diff = (this_sample.sumOfWeights - *sumOfWeights) / this_sample.sumOfWeights;
+            int nevents_diff = this_sample.NEvents - *NEvents;
+
+            if (xsec_diff>1e-3 || sumw_diff>1e-3 || nevents_diff!=0){
+                // obtain values from map, not root file (something may have been updated/corrected!)
+                m_recalculateMetadata = true;
+                m_sample = this_sample;
+            }
+        }
+
+        m_primaryDataset = m_sample.primaryDataset;
+        m_NTotalEvents   = m_sample.NEvents;
     }
 
-    m_isMC = (m_isTtbar);
+    cma::DEBUG("CONFIGURATION : Primary dataset = "+m_primaryDataset);
+
+    return;
+}
+
+
+void configuration::inspectFile( TFile& file, const std::string& metadataTreeName ){
+    /* Compare filenames to determine file type */
+    m_isQCD   = false;
+    m_isTtbar = false;
+    m_isWjets = false;
+    m_isZjets = false;
+    m_isSingleTop = false;
+    m_isDiboson   = false;
+    m_NTotalEvents = 0;
+    m_primaryDataset = "";
+    m_recalculateMetadata = false;
+    m_fileInspected = true;
+
+    readMetadata(file,metadataTreeName);               // access metadata; recalculate if necessary
+
+    m_isSignal = m_sample.sampleType=="signal";        // check if file is a signal sample
+    m_isQCD    = m_sample.sampleType=="qcd";           // check if file is QCD
+    m_isTtbar  = m_sample.sampleType=="ttbar";         // check if file is ttbar
+    m_isWjets  = m_sample.sampleType=="wjets";         // check if file is wjets
+    m_isZjets  = m_sample.sampleType=="zjets";         // check if file is wjets
+    m_isDiboson = m_sample.sampleType=="diboson";      // check if file is diboson
+    m_isSingleTop = m_sample.sampleType=="singletop";  // check if file is single top
+
+    // check if 'isMC' by comparing primarydataset with datanames (quicker) -- should work for 2016 and 2017 names
+    //   > 'string::find() returns 0' is the equivalent of python 'str.startswith()'
+    bool isData = m_sample.primaryDataset.find("SingleElectron")==0 || m_sample.primaryDataset.find("SingleMuon")==0 || m_sample.primaryDataset.find("JetHT")==0;
+    m_isMC = !isData;
+        // (m_isQCD || m_isTtbar || m_isWjets || m_isZjets || m_isSingleTop || m_isDiboson || m_isSignal);
 
     // get the metadata
-    if (m_primaryDataset.size()>0) m_NTotalEvents = m_mapOfSamples.at(m_primaryDataset).NEvents;
+    cma::DEBUG("CONFIGURATION : Found primary dataset = "+m_primaryDataset);
+    if (m_primaryDataset.size()>0) m_NTotalEvents = m_sample.NEvents;
     else{
         cma::WARNING("CONFIGURATION : Primary dataset name not found, checking the map");
+        cma::WARNING("CONFIGURATION : - isMC = "+std::to_string(m_isMC));
         for (const auto& s : m_mapOfSamples){
             Sample samp = s.second;
             std::size_t found = m_filename.find(samp.primaryDataset);
@@ -191,7 +281,6 @@ void configuration::inspectFile( TFile& file ){
             } // end if the filename contains this primary dataset
         } // end loop over map of samples (to access metadata info)
     } // end else
-
 
     // Protection against accessing truth information that may not exist
     if (!m_isMC && m_useTruth){
