@@ -5,7 +5,7 @@ date today
 output_dir eos
 username demarley
 executable run_training
-test True
+test False
 submit True
 verbose True
 config config/training.txt

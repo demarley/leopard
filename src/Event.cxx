@@ -385,8 +385,6 @@ void Event::initialize_jets(){
         jet.index   = idx;
 
         if (isGood){
-            m_jets.push_back(jet);
-
             // truth matching
             if (m_useTruth){
                 cma::DEBUG("EVENT : Truth match AK4 jets");
@@ -394,6 +392,7 @@ void Event::initialize_jets(){
                 if (jet.containment!=0) m_ak4candidates.push_back(jet);
             }
 
+            m_jets.push_back(jet);
             idx++;
         }
         if (isGoodIso){

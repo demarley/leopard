@@ -35,7 +35,7 @@ void truthMatching::setTruthTops(const std::vector<TruthTop> truth_tops){
 }
 
 
-void truthMatching::matchLeptonToTruthTop(Lepton& lepton){
+void truthMatching::matchLeptonToTruthTop(Lepton& lepton) const {
     /* Match lepton to truth top quark */
     lepton.matchId = -1;
 
@@ -54,7 +54,7 @@ void truthMatching::matchLeptonToTruthTop(Lepton& lepton){
     return;
 }
 
-void truthMatching::matchLeptonicTopJet(Jet& jet){
+void truthMatching::matchLeptonicTopJet(Jet& jet) const {
     /* Match b from leptonic top decay to AK4 */
     jet.matchId     = -1;
     jet.containment = 0;         // initialize containment
@@ -68,7 +68,7 @@ void truthMatching::matchLeptonicTopJet(Jet& jet){
 
         Parton bottomQ = m_truth_partons.at( truthtop.bottom );
         parton_match(bottomQ,jet,match_radius);
-        cma::DEBUG("TRUTHMATCHING : Jet deltaR bottomQ = "+std::to_string(jet.p4.DeltaR(bottomQ.p4))+"; match ID = "+std::to_string(jet.matchId));
+        cma::DEBUG("TRUTHMATCHING : Jet "+std::to_string(jet.index)+" deltaR bottomQ ("+std::to_string(t_idx)+") = "+std::to_string(jet.p4.DeltaR(bottomQ.p4))+"; match ID = "+std::to_string(jet.matchId));
 
         // if the jet is matched to a truth top, exit
         if (jet.containment!=0) jet.matchId = t_idx;
@@ -78,7 +78,7 @@ void truthMatching::matchLeptonicTopJet(Jet& jet){
     return;
 }
 
-void truthMatching::matchJetToTruthTop(Jet& jet){
+void truthMatching::matchJetToTruthTop(Jet& jet) const {
     /* Match reconstructed or truth jets to partons
        Currently setup to process partons from top quarks (qqb)
     */
@@ -115,7 +115,7 @@ void truthMatching::matchJetToTruthTop(Jet& jet){
 }
 
 
-bool truthMatching::parton_match(const Parton& p, Lepton& l, float dR){
+bool truthMatching::parton_match(const Parton& p, Lepton& l, float dR) const {
     /* Match parton to reconstructed jet
        @param p    truth parton
        @param l    reconstructed lepton
@@ -126,7 +126,7 @@ bool truthMatching::parton_match(const Parton& p, Lepton& l, float dR){
 }
 
 
-void truthMatching::parton_match(const Parton& p, Jet& j, float dR){
+void truthMatching::parton_match(const Parton& p, Jet& j, float dR) const {
     /* Match parton to reconstructed jet
        @param p    truth parton
        @param j    reconstructed jet
@@ -146,7 +146,7 @@ void truthMatching::parton_match(const Parton& p, Jet& j, float dR){
 }
 
 
-void truthMatching::matchJetToTruthJet(Jet& jet, const std::vector<Jet>& truth_jets){
+void truthMatching::matchJetToTruthJet(Jet& jet, const std::vector<Jet>& truth_jets) const {
     /* Match reco jet to truth jet */
     float truthDR( jet.radius );
 
