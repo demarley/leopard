@@ -68,13 +68,12 @@ void truthMatching::matchLeptonicTopJet(Jet& jet){
 
         Parton bottomQ = m_truth_partons.at( truthtop.bottom );
         parton_match(bottomQ,jet,match_radius);
+        cma::DEBUG("TRUTHMATCHING : Jet deltaR bottomQ = "+std::to_string(jet.p4.DeltaR(bottomQ.p4))+"; match ID = "+std::to_string(jet.matchId));
 
         // if the jet is matched to a truth top, exit
-        if (jet.containment!=0){
-            cma::DEBUG("TRUTHMATCHING : Jet deltaR bottomQ = "+std::to_string(jet.p4.DeltaR(bottomQ.p4)));
-            jet.matchId = t_idx;
-        }
-    }
+        if (jet.containment!=0) jet.matchId = t_idx;
+        cma::DEBUG("TRUTHMATCHING : Jet match ID = "+std::to_string(jet.matchId));
+    } // end loop over truth tops
 
     return;
 }

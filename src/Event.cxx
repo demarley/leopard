@@ -174,19 +174,15 @@ void Event::execute(Long64_t entry){
     initialize_kinematics();
     cma::DEBUG("EVENT : Setup kinematics" );
 
-    // Ttbar Reconstruction
-    if (m_leptons.size()>0)
+    // Ttbar Reconstruction -- need 1 lepton in final state
+    if (m_leptons.size()>0){
         m_ttbarRecoTool->execute(m_jets,m_leptons.at(0),m_met);
-    else{
-        // no lepton -- event will fail the selection anyway
-        Lepton dummy;
-        m_ttbarRecoTool->execute(m_jets,dummy,m_met);
-    }
-    m_ttbar = m_ttbarRecoTool->tops();
+        m_ttbar = m_ttbarRecoTool->tops();
 
-    // DNN prediction for each Top object
-    for (auto& top : m_ttbar)
-        deepLearningPrediction(top);
+        // DNN prediction for each Top object
+        for (auto& top : m_ttbar)
+            deepLearningPrediction(top);
+    }
 
     cma::DEBUG("EVENT : Setup Event ");
 
@@ -384,7 +380,9 @@ void Event::initialize_jets(){
         jet.jerSF_UP = (*m_jet_jerSF_UP)->at(i);
         jet.jerSF_DOWN = (*m_jet_jerSF_DOWN)->at(i);
 
-        jet.index = idx;
+        jet.radius  = 0.4;
+        jet.matchId = -1;
+        jet.index   = idx;
 
         if (isGood){
             m_jets.push_back(jet);
@@ -417,6 +415,7 @@ void Event::initialize_leptons(){
     for (unsigned int i=0; i<nMuons; i++){
         Lepton mu;
         mu.p4.SetPtEtaPhiE( (*m_mu_pt)->at(i),(*m_mu_eta)->at(i),(*m_mu_phi)->at(i),(*m_mu_e)->at(i));
+        mu.matchId = -1;
 
         // truth matching
         if (m_useTruth){
@@ -450,6 +449,7 @@ void Event::initialize_leptons(){
     for (unsigned int i=0; i<nElectrons; i++){
         Lepton el;
         el.p4.SetPtEtaPhiE( (*m_el_pt)->at(i),(*m_el_eta)->at(i),(*m_el_phi)->at(i),(*m_el_e)->at(i));
+        el.matchId = -1;
 
         // truth matching
         if (m_useTruth){
