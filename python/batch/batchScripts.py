@@ -1,6 +1,6 @@
 """
-Created:         3 March 2018
-Last Updated:    3 March 2018
+Created:        15 August 2018
+Last Updated:   15 August 2018
 
 Dan Marley
 daniel.edison.marley@cernSPAMNOT.ch
@@ -12,7 +12,7 @@ Templates for scripts to submit batch jobs
 
 
 def condor_bash_template():
-    """Bash script that will run Goldilocks -- designed for condor"""
+    """Bash script that will run leopard -- designed for condor"""
     bash_template = """#!/bin/tcsh
 echo " > Starting CONDOR job at `date` on `hostname`"
 
@@ -23,13 +23,13 @@ tar -xf %(cmsRelease)s.tgz
 rm %(cmsRelease)s.tgz
 
 ## copy transferred data in batch directory (only need 3 files)
-if (! -d %(cmsRelease)s/src/Analysis/goldilocks/%(unique_id_batch_path)s/ ) then
-    mkdir -p %(cmsRelease)s/src/Analysis/goldilocks/%(unique_id_batch_path)s/
+if (! -d %(cmsRelease)s/src/Analysis/leopard/%(unique_id_batch_path)s/ ) then
+    mkdir -p %(cmsRelease)s/src/Analysis/leopard/%(unique_id_batch_path)s/
 endif
 
-mv cmaConfig.txt %(cmsRelease)s/src/Analysis/goldilocks/%(unique_id_batch_path)s/
-mv listOfFiles.txt %(cmsRelease)s/src/Analysis/goldilocks/%(unique_id_batch_path)s/
-mv run_condor.sh %(cmsRelease)s/src/Analysis/goldilocks/%(unique_id_batch_path)s/
+mv cmaConfig.txt %(cmsRelease)s/src/Analysis/leopard/%(unique_id_batch_path)s/
+mv listOfFiles.txt %(cmsRelease)s/src/Analysis/leopard/%(unique_id_batch_path)s/
+mv run_condor.sh %(cmsRelease)s/src/Analysis/leopard/%(unique_id_batch_path)s/
 
 ## Setup CMSSW environment
 setenv SCRAM_ARCH slc6_amd64_gcc530
@@ -39,8 +39,8 @@ eval `scramv1 runtime -csh` # cmsenv is an alias not on the workers
 scram b -j8
 
 
-## Execute goldilocks
-cd Analysis/goldilocks
+## Execute leopard
+cd Analysis/leopard
 
 echo " > Run the program "
 %(executable)s %(cfg_filename)s

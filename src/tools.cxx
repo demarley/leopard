@@ -153,7 +153,7 @@ void getSampleWeights( std::string metadata_file,
     char* cma_path = getenv("LEOPARDDIR");
     std::string cma_absPath("");
     if (cma_path==NULL){
-        cma::WARNING("TOOLS : environment variable 'CYMINIANADIR' is not set." );
+        cma::WARNING("TOOLS : environment variable 'LEOPARDDIR' is not set." );
         cma::WARNING("TOOLS : Relative paths will be used " );
         cma_absPath = "./";
     }
