@@ -1,6 +1,6 @@
 """
-Created:        11 November  2016
-Last Updated:   16 February  2018
+Created:        16 August 2018
+Last Updated:   16 August 2018
 
 Dan Marley
 daniel.edison.marley@cernSPAMNOT.ch
@@ -13,18 +13,35 @@ Designed for running on desktop at TAMU
 with specific set of software installed
 --> not guaranteed to work in CMSSW environment!
 """
+import os
+import sys
 import json
 import util
 import itertools
 from datetime import date
 import numpy as np
 
-from Analysis.hepPlotter.histogram1D import Histogram1D
-from Analysis.hepPlotter.histogram1D import Histogram2D
+# load hepPlotter code
+try:
+    CMSSW_BASE = os.environ['CMSSW_BASE']
+    from Analysis.hepPlotter.histogram1D import Histogram1D
+    from Analysis.hepPlotter.histogram1D import Histogram2D
+    import Analysis.hepPlotter.labels as hpl
+    import Analysis.hepPlotter.tools as hpt
+except KeyError:
+    cwd = os.getcwd()
+    hpd = cwd.rstrip("leopard/python")+"/hepPlotter/python/"
+    if hpd not in sys.path:
+        sys.path.insert(0,hpd)
+        print("Added {0} to path!".format(hpd))
+    else:
+        print("Already exists in path!")
+    from histogram1D import Histogram1D
+    from histogram2D import Histogram2D
+    import labels as hpl
+    import tools as hpt
 
-import Analysis.hepPlotter.labels as hpl
-import Analysis.hepPlotter.tools as hpt
-
+import matplotlib.pyplot as plt
 
 
 class Target(object):
@@ -71,7 +88,7 @@ class DeepLearningPlotter(object):
         """
         self.df = dataframe
 
-        self.listOfFeatures     = self.df.keys()
+        self.listOfFeatures     = [i for i in self.df.keys() if i!='target']
         self.listOfFeaturePairs = list(itertools.combinations(self.listOfFeatures,2))
 
         assert len(target_names)==len(target_values), "Lengths of target names and target values are not the same"
@@ -105,7 +122,7 @@ class DeepLearningPlotter(object):
         # plot the features and calculate significance
         for hi,feature in enumerate(self.listOfFeatures):
 
-            hist = HepPlotterHist1D()
+            hist = Histogram1D()
 
             hist.normed  = True
             hist.stacked = False
@@ -114,32 +131,31 @@ class DeepLearningPlotter(object):
             hist.y_label = "A.U." if hist.normed else "Events"
             hist.format  = self.image_format
             hist.saveAs  = self.output_dir+"/hist_"+feature+"_"+self.date
-            hist.ratio_plot     = True
-            hist.ratio_type     = 'significance'
-            hist.y_label_ratio  = r"S/$\sqrt{\text{B}}$"
-            hist.CMSlabel       = 'top left'
+            hist.CMSlabel       = 'outer'
             hist.CMSlabelStatus = self.CMSlabelStatus
+
+            hist.ratio.value  = "significance"
+            hist.ratio.ylabel = r"A/$\sqrt{\text{B}}$"
 
             hist.initialize()
 
             # Add some extra text to the plot
             n_extra_text = 0      # auto-adjust label based on number of extra text args
-            if self.processlabel: # physics process that produces these features
-                hist.extra_text.Add(self.processlabel,coords=[0.03,0.80])
-                n_extra_text+=1
-
 
             # Plot the distribution for each target with ratios between classes
             for t,target in enumerate(self.targets):
-                ratios = []
+                ratios = ''
                 name = target.name
                 for pair in self.target_pairs:
                     # only check with first entry to prevent double-plotting ratios
-                    if name == pair[0]: ratios.append( (pair[1],True))
-
+                    if name == pair[0]: ratios = pair[1]
+                    elif name==pair[1]: ratios = pair[0]
                 kwargs = {"draw_type":"step","edgecolor":target.color,"label":target.label}
 
-                hist.Add(target.df[feature],name=name,ratios=ratios,**kwargs)
+                hist.Add(target.df[feature],name=name,**kwargs)
+
+                # Add ratio plot
+                hist.ratio.Add(numerator=name,denominator=ratios,draw_type='errorbar')
 
 
             # Add text to display the separation between each class for the feature
@@ -263,8 +279,8 @@ class DeepLearningPlotter(object):
             # shift location of ticks to center of the bins
             ax.set_xticks(np.arange(len(labels))+0.5, minor=False)
             ax.set_yticks(np.arange(len(labels))+0.5, minor=False)
-            ax.set_xticklabels(labels, fontProperties, fontsize=12, minor=False, ha='right', rotation=70)
-            ax.set_yticklabels(labels, fontProperties, fontsize=12, minor=False)
+            ax.set_xticklabels(labels, fontsize=12, minor=False, ha='right', rotation=70)
+            ax.set_yticklabels(labels, fontsize=12, minor=False)
 
             ## CMS/COM Energy Label + Signal name
             self.stamp_cms(ax)
@@ -489,7 +505,9 @@ class DeepLearningPlotter(object):
 
     def getSeparations(self):
         """Calculate separations between classes for each feature"""
-        self.separations = {}
+        self.separations = dict( (k,{}) for k in self.listOfFeatures)
+        for featurepairs in self.listOfFeaturePairs:
+             self.separations['-'.join(featurepairs)] = {}
 
         # One dimensional separations
         for target in self.target_pairs:
@@ -500,6 +518,7 @@ class DeepLearningPlotter(object):
             fcsv = open("{0}.csv".format(saveAs),"w")
 
             for feature in self.listOfFeatures:
+                if feature=='target': continue
 
                 # bin the data to make separation calculation simple
                 data_a,_ = np.histogram(target_a.df[feature],normed=True,
@@ -527,9 +546,9 @@ class DeepLearningPlotter(object):
                 binning_y = self.variable_labels[feature_y].binning
 
                 # bin the data to make separation calculation simple
-                data_a,_,_ = np.hist2d(target_a.df[feature_x],target_a.df[feature_y],
+                data_a,_,_ = np.histogram2d(target_a.df[feature_x],target_a.df[feature_y],
                                        bins=[binning_x,binning_y],normed=True)
-                data_b,_,_ = np.hist2d(target_b.df[feature_x],target_b.df[feature_y],
+                data_b,_,_ = np.histogram2d(target_b.df[feature_x],target_b.df[feature_y],
                                        bins=[binning_x,binning_y],normed=True)
 
                 separation = util.getSeparation2D(data_a,data_b)
@@ -542,20 +561,13 @@ class DeepLearningPlotter(object):
         return
 
 
-
-    def model(self,model,name):
-        """Plot the model architecture to view later"""
-        keras_plot(model,to_file='{0}/{1}_model.eps'.format(self.output_dir,name),show_shapes=True)
-        return
-
-
     def stamp_energy(self,axis):
         energy_stamp    = hpl.EnergyStamp()
         energy_stamp.ha = 'right'
         energy_stamp.coords = [0.99,1.00]
         energy_stamp.fontsize = 16
         energy_stamp.va = 'bottom'
-        ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
+        axis.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
                 fontsize=energy_stamp.fontsize,ha=energy_stamp.ha,va=energy_stamp.va,
                 transform=axis.transAxes)
 
@@ -566,7 +578,7 @@ class DeepLearningPlotter(object):
         cms_stamp.coords = [0.02,1.00]
         cms_stamp.fontsize = 16
         cms_stamp.va = 'bottom'
-        ax.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
+        axis.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
                 ha=cms_stamp.ha,va=cms_stamp.va,transform=axis.transAxes)
 
         return

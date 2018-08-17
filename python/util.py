@@ -46,7 +46,7 @@ def getHistSeparation( S, B ):
     return separation
 
 
-def GetHistSeparation2D( S, B ):
+def getHistSeparation2D( S, B ):
     """Compare TH2* S and B -- need same dimensions"""
     separation = 0
 
@@ -88,7 +88,7 @@ def getSeparation(sig,bkg):
     return separation
 
 
-def GetSeparation2D( S, B ):
+def getSeparation2D( S, B ):
     """Compare 2D arrays of S and B -- need same dimensions"""
     separation = 0
 

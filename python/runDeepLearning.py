@@ -12,10 +12,6 @@ Script for running the deep learning implementation
 To run:
 $ python python/runDeepLearning.py config/mlconfig.txt
 -- the second argument is the text file with configurations for the NN/setup
-
- {"none",0},    // :: NONE = QCD (background)
- {"QB",1},      // :: QB-Q = Signal AK8(QB) + AK4(Q)
- {"W",2},       // :: QQ-B = Signal AK8(W)  + AK4(B)
 """
 import os
 import sys
@@ -29,13 +25,13 @@ from deepLearning import DeepLearning
 
 print
 print " ------------------------------ "
-print " *  Deep Learning with Keras  * "
+print " * Deep Learning with PyTorch * "
 print " ------------------------------ "
 print
 
 
 date   = strftime("%d%b", localtime())
-cmaDir = os.path.expandvars('$CYMINIANADIR')
+cmaDir = os.path.expandvars('$LEOPARDDIR')
 vb     = util.VERBOSE()
 
 ## Set configuration options ##
@@ -54,7 +50,10 @@ if not config.runTraining and not config.runInference:
 NN_parameters = ['epochs','batch_size','loss','optimizer','metrics','activations',
                  'nHiddenLayers','nNodes','input_dim','kfold_splits']
 
-featureKeys = json.load(open('config/features.json'))
+try:
+    featureKeys = json.load(open('config/features.json'))
+except IOError:
+    featureKeys = {}
 
 featureKey = -1
 for key in featureKeys.keys():
@@ -62,7 +61,8 @@ for key in featureKeys.keys():
         featureKey = int(key)
         break
 if featureKey<0:
-    featureKey = max([int(i) for i in featureKeys.keys()])+1
+    keys = featureKeys.keys()
+    featureKey = max([int(i) for i in keys])+1 if keys else 0
     featureKeys[str(featureKey)] = config.features
     vb.INFO("RUN :  New features for NN ")
     with open('config/features.json','w') as outfile:
@@ -89,7 +89,6 @@ dnn.treename   = config.treename
 dnn.useLWTNN   = True
 dnn.dnn_name   = "dnn"
 dnn.output_dim = config.output_dim
-dnn.dnn_method = config.dnn_method
 dnn.loss       = config.loss
 dnn.init       = config.init
 dnn.nNodes     = config.nNodes
@@ -129,10 +128,9 @@ dnn.initialize()
 
 
 if config.runTraining:
-
     vb.INFO("RUN :  > Build the NN")
     # set properties of the NN
-    dnn.runTraining()
+    dnn.training()
 
     ## -- Save information on the NN to a text file to reference later
     outputFile = open(dnn.output_dir+'/ABOUT.txt','w')
@@ -150,7 +148,7 @@ if config.runTraining:
 
 if config.runInference:
     vb.INFO("RUN :  > Load NN model from disk")
-    dnn.runInference()
+    dnn.inference()
 
 
 ## END ##

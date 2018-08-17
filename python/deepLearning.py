@@ -1,7 +1,6 @@
-
 """
-Created:        11 November  2016
-Last Updated:   15 February  2018
+Created:        16 August 2018
+Last Updated:   16 August 2018
 
 Dan Marley
 daniel.edison.marley@cernSPAMNOT.ch
@@ -18,40 +17,56 @@ Does not use ROOT directly.
 Instead, this is setup to use flat ntuples
 that are accessed via uproot.
 
-
 > UPROOT:     https://github.com/scikit-hep/uproot
 > KERAS:      https://keras.io/
 > TENSORFLOW: https://www.tensorflow.org/
 > PYTORCH:    http://pytorch.org/
 > LWTNN:      https://github.com/lwtnn/lwtnn
-
-Expandable: Do 'testing' phase later than training phase
-            Diagnostics post-training phase
-            Different model (PyTorch)
 """
 import json
 import util
 import datetime
 
+from deepLearningPlotter import DeepLearningPlotter
+
 import uproot
-import matplotlib
-matplotlib.use('Agg')
 import numpy as np
 import pandas as pd
 
-import keras
-from keras.models import Sequential,model_from_json,load_model
-from keras.layers import Dense, Activation
-from keras.callbacks import EarlyStopping
-from keras.utils.np_utils import to_categorical
+import torch
+import torch.nn as nn
+import torch.nn.functional as tf
+from torch.autograd import Variable
+
 from sklearn.model_selection import train_test_split,StratifiedKFold
 from sklearn.metrics import roc_curve, auc
-from deepLearningPlotter import DeepLearningPlotter
 
 
 # fix random seed for reproducibility
 seed = 2018
 np.random.seed(seed)
+
+
+class LeopardNet(nn.Module):
+    """Neural Network for Leopard in PyTorch
+       Adapted from (16 August 2018)
+         https://github.com/thongonary/surf18-tutorial/blob/master/tuto-8-torch.ipynb
+    """
+    def __init__(self,layers):
+        super(LeopardNet,self).__init__()
+        self.dense = nn.ModuleList()
+        for l,layer in enumerate(layers):
+            self.dense.append( nn.Linear(layer['in'],layer['out']) )
+    
+    def forward(self, x): 
+        """All the computation steps of the input are defined in this function"""
+        nlayers = len(self.dense)
+        for i,d in enumerate(self.dense):
+            x = d(x)
+            x = tf.relu(x) if i!=nlayers-1 else tf.sigmoid(x)
+
+        return x
+    
 
 
 class DeepLearning(object):
@@ -71,7 +86,7 @@ class DeepLearning(object):
         self.train_predictions = []   # set later
         self.test_predictions  = []   # set later
 
-        ## NN architecture & parameters -- set by config file
+        ## Config options
         self.treename   = 'features'    # Name of TTree to access in ROOT file (via uproot)
         self.useLWTNN   = True          # export (& load model from) files for LWTNN
         self.dnn_name   = "dnn"         # name to access in lwtnn ('variables.json')
@@ -83,6 +98,11 @@ class DeepLearning(object):
         self.verbose_level  = 'INFO'
         self.verbose = False
 
+        ## PyTorch objects
+        self.loss_fn   = None  # pytorch loss function
+        self.torch_opt = None  # pytorch optimizer
+
+        ## NN architecture (from config)
         self.loss    = 'binary_crossentropy' # preferred for binary classification
         self.init    = 'normal'
         self.nNodes  = []
@@ -94,9 +114,10 @@ class DeepLearning(object):
         self.input_dim  = 1                  # len(self.features)
         self.output_dim = 1                  # number of output dimensions (# of categories/# of predictions for regression)
         self.batch_size = 32
-        self.activations   = ['elu']         # https://keras.io/activations/
+        self.activations   = ['elu']
         self.kfold_splits  = 2
         self.nHiddenLayers = 1
+        self.learning_rate = 1e-4
         self.earlystopping = {}              # {'monitor':'loss','min_delta':0.0001,'patience':5,'mode':'auto'}
 
 
@@ -154,23 +175,24 @@ class DeepLearning(object):
 
 
     ## Single functions to run all of the necessary pieces
-    def runTraining(self):
+    def training(self):
         """Train NN model"""
         self.load_hep_data()
         self.build_model()
 
         # hard-coded :/
-        target_names  = ["multijet","QB","W"]
-        target_values = [0,1,2]
+        target_names  = ["bckg","signal"]
+        target_values = [0,1]
         self.plotter.initialize(self.df,target_names,target_values)
 
         if self.runDiagnostics:
             self.diagnostics(preTraining=True)     # save plots of the features and model architecture
 
+        self.msg_svc.INFO("DL : Train the model")
         self.train_model()
 
-        self.msg_svc.INFO(" SAVE MODEL")
-        self.save_model(self.useLWTNN)
+        self.msg_svc.INFO("DL : SAVE MODEL")
+        self.save_model()
 
         if self.runDiagnostics:
             self.diagnostics(postTraining=True)    # save plots of the performance in training/testing
@@ -178,7 +200,7 @@ class DeepLearning(object):
         return
 
 
-    def runInference(self,data=None):
+    def inference(self,data=None):
         """
         Run inference of the NN model
         User responsible for diagnostics if not doing training: 
@@ -188,17 +210,20 @@ class DeepLearning(object):
               plot_prediction() -> compare output prediction (works for classification)
               plot_ROC()        -> signal vs background efficiency (need self.fpr, self.tpr filled)
         """
-        self.load_model(self.useLWTNN)
+        self.msg_svc.INFO("DL : Load model for inference")
+        self.load_model()
 
+        self.msg_svc.INFO("DL : Load data")
         if data is None:
             try:
                 self.load_hep_data()
                 data = self.df[self.features]
             except:
-                self.msg_svc.ERROR("DL : runInference() cannot proceed because 'data' is None and cannot load HEP data")
+                self.msg_svc.ERROR("DL : inference() cannot proceed because 'data' is None and cannot load HEP data")
                 self.msg_svc.ERROR("DL : Please check your implementation.")
                 return -999
 
+        self.msg_svc.INFO("DL : Make inference")
         prediction = self.predict(data)
 
         return prediction
@@ -210,22 +235,40 @@ class DeepLearning(object):
         self.msg_svc.INFO("DL : Build the neural network model")
 
         ## Declare the model
-        self.model = Sequential() # The Keras Sequential model is a linear stack of layers.
+        layers = []
+        layers.append( {'in':int(self.input_dim),'out':int(self.nNodes[0])} )
+        for i,n in enumerate(self.nNodes):
+            if i==len(self.nNodes)-1: continue
+            layers.append( {'in':int(n),'out':int(self.nNodes[i+1])} )
+        layers.append( {'in':int(self.nNodes[-1]),'out':self.output_dim} )
 
-        ## Add 1st layer
-        self.model.add( Dense( int(self.nNodes[0]), input_dim=self.input_dim, kernel_initializer=self.init, activation=self.activations[0]) )
+        self.model = LeopardNet(layers)
 
-        ## Add hidden layer(s)
-        for h in range(self.nHiddenLayers):
-            self.model.add( Dense( int(self.nNodes[h+1]), kernel_initializer=self.init, activation=self.activations[h+1]) )
-
-        ## Add the output layer
-        self.model.add( Dense(self.output_dim,kernel_initializer=self.init, activation=self.activations[-1]) )
-
-        ## Build the model
-        self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        self.loss_fn   = torch.nn.BCELoss()
+        self.torch_opt = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate) #1e-4)
 
         return
+
+
+    def train_epoch(self,X,Y):
+        """"""
+        losses = []
+        for beg_i in range(0, len(X), self.batch_size):
+            x_batch = torch.from_numpy(X[beg_i:beg_i+self.batch_size,:])
+            y_batch = torch.from_numpy(Y[beg_i:beg_i+self.batch_size])
+            x_batch = Variable(x_batch)
+            y_batch = Variable(y_batch).float().unsqueeze_(-1)  # modify dimensions (X,) -> (X,1)
+
+            self.torch_opt.zero_grad()
+
+            y_hat = self.model(x_batch)         # forward
+            loss = self.loss_fn(y_hat, y_batch) # compute loss
+            loss.backward()                     # compute gradients
+            self.torch_opt.step()               # update weights
+
+            losses.append(loss.data.numpy())
+
+        return losses
 
 
 
@@ -233,22 +276,8 @@ class DeepLearning(object):
         """Setup for training the model using k-fold cross-validation"""
         self.msg_svc.INFO("DL : Train the model!")
 
-        callbacks_list = []
-        if self.earlystopping:
-            earlystop = EarlyStopping(**self.earlystopping)
-            callbacks_list = [earlystop]
-
-        ttbar1 = self.df[ self.df['target']==1 ]
-        ttbar2 = self.df[ self.df['target']==2 ]
-
-        qcd    = self.df[ self.df['target']==0 ]
-        qcd    = qcd.sample(frac=1)[0:ttbar1.shape[0]]   # equal statistics (shuffle QCD entries first)
-
-        training_df = pd.concat( [qcd,ttbar1,ttbar2] )  # re-combine into dataframe
-        training_df = training_df.sample(frac=1)         # shuffle entries
-
-        X = training_df[self.features].values  # self.df[self.features].values
-        Y = training_df['target'].values       # self.df['target'].values
+        X = self.df[self.features].values
+        Y = self.df['target'].values
 
         kfold = StratifiedKFold(n_splits=self.kfold_splits, shuffle=True, random_state=seed)
         nsplits = kfold.get_n_splits(X,Y)
@@ -261,25 +290,6 @@ class DeepLearning(object):
             Y_train = Y[train]
             Y_test  = Y[test]
 
-            # - Adjust shape of true values (matrix for multiple outputs)
-            if self.dnn_method=='multi' or self.dnn_method=='regression' and not np.array_equal(Y_train,(Y_train[0],self.output_dim)):
-                train_shape = Y_train.shape[0]
-                train_total_array = []
-                test_shape = Y_test.shape[0]
-                test_total_array = []
-
-                for a in range(self.output_dim):
-                    dummy_train = np.zeros(train_shape)
-                    dummy_train[Y_train==a] = 1
-                    train_total_array.append( dummy_train.tolist() )
-
-                    dummy_test = np.zeros(test_shape)
-                    dummy_test[Y_test==a] = 1
-                    test_total_array.append( dummy_test.tolist() )
-                Y_train = np.array(train_total_array).T
-                Y_test  = np.array(test_total_array).T
-
-
             # -- store test/train data from each k-fold to compare later
             self.test_data['X'].append(X[test])
             self.test_data['Y'].append(Y_test)
@@ -287,30 +297,32 @@ class DeepLearning(object):
             self.train_data['Y'].append(Y_train)
 
             ## Fit the model to training data & save the history
-            history = self.model.fit(X[train],Y_train,epochs=self.epochs,\
-                                     callbacks=callbacks_list,batch_size=self.batch_size,verbose=self.verbose)
-            self.histories.append(history)
-
+            self.model.train()
+            e_losses = []
+            for t in range(self.epochs):
+                e_losses += self.train_epoch(X[train],Y_train)
+                self.msg_svc.INFO("DL :    Epoch {0} -- Loss {1}".format(t,e_losses[-1]))
+            self.histories.append(e_losses)
 
             # evaluate the model
             self.msg_svc.DEBUG("DL :     + Evaluate the model: ")
-            predictions = self.model.evaluate(X[test], Y_test,verbose=self.verbose,batch_size=self.batch_size)
-            cvpredictions.append(predictions[1] * 100)
-            self.msg_svc.DEBUG("DL :       {0}: {1:.2f}%".format(self.model.metrics_names[1], predictions[1]*100))
+            self.model.eval()
 
             # Evaluate training sample
+            self.msg_svc.INFO("DL : Predictions from training sample")
             train_predictions = self.predict(X[train])
             self.train_predictions.append( train_predictions )
 
             # Evaluate test sample
+            self.msg_svc.INFO("DL : Predictions from testing sample")
             test_predictions  = self.predict(X[test])
             self.test_predictions.append( test_predictions )
 
             # Make ROC curve from test sample
-            if self.dnn_method=='binary':
-                fpr,tpr,_ = roc_curve( Y[test], test_predictions )
-                self.fpr.append(fpr)
-                self.tpr.append(tpr)
+            self.msg_svc.INFO("DL : Make ROC curves")
+            fpr,tpr,_ = roc_curve( Y[test], test_predictions )
+            self.fpr.append(fpr)
+            self.tpr.append(tpr)
 
         self.msg_svc.INFO("DL :   Finished K-Fold cross-validation: ")
         self.accuracy = {'mean':np.mean(cvpredictions),'std':np.std(cvpredictions)}
@@ -324,9 +336,9 @@ class DeepLearning(object):
         self.msg_svc.DEBUG("DL : Get the DNN prediction")
         if data is None:
             self.msg_svc.ERROR("DL : predict() given NoneType data. Returning -999.")
-            self.msg_svc.ERROR("DL : Please check your configuration!")
             return -999.
-        return self.model.predict( data )
+        data = torch.from_numpy(data)
+        return self.model( Variable(data) )
 
 
     def load_hep_data(self,variables2plot=[]):
@@ -348,66 +360,16 @@ class DeepLearning(object):
 
     def load_model(self,from_lwtnn=False):
         """Load existing model to make plots or predictions"""
-        self.model = None
-
-        if from_lwtnn:
-            model_json = open(self.model_name+"_model.json",'r').read()
-            self.model = model_from_json(model_json)
-            self.model.load_weights(self.model_name+"_weights.h5")
-            self.model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
-        else:
-            self.model = load_model('{0}.h5'.format(self.model_name))
-
+        output = self.output_dir+'/'+self.model_name
+        self.model.load_state_dict(torch.load(output))
+        self.model.eval()
         return
 
 
     def save_model(self,to_lwtnn=False):
         """Save the model for use later"""
         output = self.output_dir+'/'+self.model_name
-
-        if to_lwtnn:
-            ## Save to format for LWTNN
-            self.save_features()            ## Save variables to JSON file
-
-            ## model architecture
-            model_json = self.model.to_json()
-            with open(output+'_model.json', 'w') as outfile:
-                outfile.write(model_json)
-
-            ## save the model weights
-            self.model.save_weights(output+'_weights.h5')
-        else:
-            self.model.save('{0}.h5'.format(output))     # creates a HDF5 file of model
-
-        return
-
-
-    def save_features(self):
-        """
-        Save the features to a json file to load via lwtnn later
-        Hard-coded scale & offset; must change later if necessary
-        """
-        text = """  {
-    "inputs": ["""
-
-        for fe,feature in enumerate(self.features):
-            comma = "," if fe!=len(self.features) else ""
-            tmp = """
-      {"name": "%(feature)s",
-       "scale":  1,
-       "offset": 0}%(comma)s""" % {'feature':feature,'comma':comma}
-            text += tmp
-        text += "],"
-        text += """
-    "class_labels": ["%(name)s"],
-    "keras_version": "%(version)s",
-    "miscellaneous": {}
-  }
-""" % {'version':keras.__version__,'name':self.dnn_name}
-
-        varsFileName = self.output_dir+'/variables.json'
-        varsFile     = open(varsFileName,'w')
-        varsFile.write(text)
+        torch.save(self.model.state_dict(),output)
 
         return
 
@@ -420,9 +382,8 @@ class DeepLearning(object):
         # Diagnostics before the training
         if preTraining:
             self.msg_svc.INFO("DL : -- pre-training")
-            self.plotter.features()                   # compare features for different targets
-            self.plotter.feature_correlations()       # correlations of features
-            self.plotter.model(self.model,self.model_name) # Keras plot of the model architecture
+            self.plotter.features()                        # compare features for different targets
+            self.plotter.correlation()                     # correlations of features
 
         # post training/testing
         if postTraining:
