@@ -209,9 +209,8 @@ class DeepLearningPlotter(object):
             plt.savefig("{0}.{1}".format(saveAs,self.image_format))
             plt.close()
 
-
             ## Two dimensional separation plot
-            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
+            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a.label,target_b.label,self.date)
 
             # from the separations values for each unique (feature_x,feature_y) combination
             # build a matrix that can be drawn using hist2d()

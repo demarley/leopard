@@ -144,7 +144,7 @@ class DeepLearning(object):
 
 
         ## -- Plotting framework
-        print " >> Store output in ",self.output_dir
+        self.msg_svc.INFO("DL :  >> Store output in {0}".format(self.output_dir))
         self.plotter = DeepLearningPlotter()  # class for plotting relevant NN information
         self.plotter.output_dir   = self.output_dir
         self.plotter.image_format = 'pdf'
@@ -274,8 +274,6 @@ class DeepLearning(object):
 
     def train_model(self):
         """Setup for training the model using k-fold cross-validation"""
-        self.msg_svc.INFO("DL : Train the model!")
-
         X = self.df[self.features].values
         Y = self.df['target'].values
 
@@ -283,9 +281,9 @@ class DeepLearning(object):
         nsplits = kfold.get_n_splits(X,Y)
         cvpredictions = []                 # compare outputs from each cross-validation
 
-        self.msg_svc.INFO("DL :   Fitting K-Fold cross validation".format(self.kfold_splits))
+        self.msg_svc.INFO("DL :   Fitting K-Fold cross validations")
         for ind,(train,test) in enumerate(kfold.split(X,Y)):
-            self.msg_svc.DEBUG("DL :   - Fitting K-Fold {0}".format(ind))
+            self.msg_svc.INFO("DL :   - Fitting K-Fold {0}".format(ind))
 
             Y_train = Y[train]
             Y_test  = Y[test]
@@ -352,6 +350,13 @@ class DeepLearning(object):
         file    = uproot.open(self.hep_data)
         data    = file[self.treename]
         self.df = data.pandas.df( self.features+['target']+variables2plot )
+
+        # Make the dataset sizes equal (trim away some background)
+        signal = self.df[ self.df['target']==1 ]
+        bckg   = self.df[ self.df['target']==0 ]
+        backg  = bckg.sample(frac=1)[0:signal.shape[0]]      # equal statistics (& shuffle first!)
+
+        self.df = pd.concat( [bckg,signal] ).sample(frac=1)  # re-combine into dataframe and shuffle
 
         self.metadata = file['metadata']   # names of samples, target values, etc.
 
