@@ -177,14 +177,17 @@ class DeepLearningPlotter(object):
 
     def separation(self):
         """Plot the separations between features of the NN"""
-        listOfFeatures = list(self.listOfFeatures)
+        listOfFeatures = list(self.listOfFeatures) #[self.variable_labels[f].label for f in self.listOfFeatures]
         listOfFeaturePairs = list(self.listOfFeaturePairs)
+        featurelabels = [self.variable_labels[f].label for f in listOfFeatures]
 
         nfeatures = len(listOfFeatures)
 
         for target in self.target_pairs:
             target_a = target[0]
             target_b = target[1]
+
+            print "separations ",target_a,target_b
 
             ## One dimensional separation plot (horizontal bar chart)
             saveAs = "{0}/separations1D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
@@ -199,6 +202,9 @@ class DeepLearningPlotter(object):
             # make the bar plot
             fig,ax = plt.subplots()
             ax.barh(listOfFeatures, separations, align='center')
+            print ax.get_yticklabels()
+            ax.set_yticks(listOfFeatures)
+            ax.set_yticklabels(featurelabels,fontsize=12)
 
             # CMS/COM Energy Label + Signal name
             self.stamp_cms(ax)
@@ -209,8 +215,9 @@ class DeepLearningPlotter(object):
             plt.savefig("{0}.{1}".format(saveAs,self.image_format))
             plt.close()
 
-            ## Two dimensional separation plot
-            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a.label,target_b.label,self.date)
+
+            ## Two dimensional separation plot ##
+            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
 
             # from the separations values for each unique (feature_x,feature_y) combination
             # build a matrix that can be drawn using hist2d()
@@ -240,13 +247,12 @@ class DeepLearningPlotter(object):
             # shift location of ticks to center of the bins
             ax.set_xticks(np.arange(len(self.listOfFeatures))+0.5, minor=False)
             ax.set_yticks(np.arange(len(self.listOfFeatures))+0.5, minor=False)
-            ax.set_xticklabels(self.listOfFeatures, minor=False, ha='right', rotation=70)
-            ax.set_yticklabels(self.listOfFeatures, minor=False)
+            ax.set_xticklabels(featurelabels, minor=False, ha='right', rotation=70)
+            ax.set_yticklabels(featurelabels, minor=False)
 
             ## CMS/COM Energy Label + Signal name
             self.stamp_cms(ax)
             self.stamp_energy(ax)
-            ax.text(0.03,0.93,target.label,fontsize=16,ha='left',va='bottom',transform=ax.transAxes)
 
             plt.savefig("{0}.{1}".format(saveAs,self.image_format))
             plt.close()
@@ -513,7 +519,7 @@ class DeepLearningPlotter(object):
             target_a = [i for i in self.targets if i.name==target[0]][0]
             target_b = [i for i in self.targets if i.name==target[1]][0]
 
-            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
+            saveAs = "{0}/separations1D_{1}-{2}_{3}".format(self.output_dir,target_a.name,target_b.name,self.date)
             fcsv = open("{0}.csv".format(saveAs),"w")
 
             for feature in self.listOfFeatures:
@@ -534,7 +540,7 @@ class DeepLearningPlotter(object):
 
 
             # Two dimensional separations
-            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
+            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a.name,target_b.name,self.date)
             fcsv   = open("{0}.csv".format(saveAs),"w")
 
             for featurepairs in self.listOfFeaturePairs:

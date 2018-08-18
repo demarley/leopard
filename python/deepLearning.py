@@ -243,6 +243,7 @@ class DeepLearning(object):
         layers.append( {'in':int(self.nNodes[-1]),'out':self.output_dim} )
 
         self.model = LeopardNet(layers)
+        self.model.cuda()
 
         self.loss_fn   = torch.nn.BCELoss()
         self.torch_opt = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate) #1e-4)
@@ -256,8 +257,8 @@ class DeepLearning(object):
         for beg_i in range(0, len(X), self.batch_size):
             x_batch = torch.from_numpy(X[beg_i:beg_i+self.batch_size,:])
             y_batch = torch.from_numpy(Y[beg_i:beg_i+self.batch_size])
-            x_batch = Variable(x_batch)
-            y_batch = Variable(y_batch).float().unsqueeze_(-1)  # modify dimensions (X,) -> (X,1)
+            x_batch = Variable(x_batch).cuda()
+            y_batch = Variable(y_batch).float().unsqueeze_(-1).cuda()  # modify dimensions (X,) -> (X,1)
 
             self.torch_opt.zero_grad()
 
@@ -266,7 +267,7 @@ class DeepLearning(object):
             loss.backward()                     # compute gradients
             self.torch_opt.step()               # update weights
 
-            losses.append(loss.data.numpy())
+            losses.append(loss.data.cpu().numpy())
 
         return losses
 
@@ -336,7 +337,10 @@ class DeepLearning(object):
             self.msg_svc.ERROR("DL : predict() given NoneType data. Returning -999.")
             return -999.
         data = torch.from_numpy(data)
-        return self.model( Variable(data) )
+        self.model.eval()
+        result = self.model( Variable(data).cuda() )
+
+        return result
 
 
     def load_hep_data(self,variables2plot=[]):
@@ -389,6 +393,7 @@ class DeepLearning(object):
             self.msg_svc.INFO("DL : -- pre-training")
             self.plotter.features()                        # compare features for different targets
             self.plotter.correlation()                     # correlations of features
+            self.plotter.separation()                      # seprations between features
 
         # post training/testing
         if postTraining:
