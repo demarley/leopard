@@ -420,7 +420,10 @@ class DeepLearningPlotter(object):
 
     def plot_loss_history(self,history,ax=None,index=-1):
         """Draw history of model"""
-        loss  = history.history['loss']
+        try:
+            loss = history.history['loss']
+        except:
+            loss = history
         x     = range(1,len(loss)+1)
         label = 'Loss {0}'.format(index) if index>=0 else 'Loss'
         ax.plot(x,loss,label=label)
