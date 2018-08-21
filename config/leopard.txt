@@ -7,7 +7,7 @@ output_path /data/demarley/b2g/leopard/
 method binary
 nHiddenLayers 4
 nNodes 40
-epochs 10
+epochs 1
 batch_size 128
 loss binary_crossentropy
 activation relu,sigmoid

@@ -21,6 +21,8 @@ import itertools
 from datetime import date
 import numpy as np
 
+from sklearn.metrics import auc
+
 # load hepPlotter code
 try:
     CMSSW_BASE = os.environ['CMSSW_BASE']
@@ -41,6 +43,7 @@ except KeyError:
     import labels as hpl
     import tools as hpt
 
+import plotlabels as plb
 import matplotlib.pyplot as plt
 
 
@@ -63,8 +66,8 @@ class DeepLearningPlotter(object):
         self.date = date.today().strftime('%d%b%Y')
 
         self.betterColors    = hpt.betterColors()['linecolors']
-        self.sample_labels   = hpl.sample_labels()
-        self.variable_labels = hpl.variable_labels()
+        self.sample_labels   = plb.sample_labels()
+        self.variable_labels = plb.variable_labels()
 
         self.msg_svc      = util.VERBOSE()
         self.output_dir   = ''
@@ -78,7 +81,7 @@ class DeepLearningPlotter(object):
         self.CMSlabelStatus = "Simulation Internal"
 
 
-    def initialize(self,dataframe,target_names=[],target_values=[]):
+    def initialize(self,dataframe,targets={}):
         """
         Set parameters of class to make plots
 
@@ -91,9 +94,7 @@ class DeepLearningPlotter(object):
         self.listOfFeatures     = [i for i in self.df.keys() if i!='target']
         self.listOfFeaturePairs = list(itertools.combinations(self.listOfFeatures,2))
 
-        assert len(target_names)==len(target_values), "Lengths of target names and target values are not the same"
-
-        for i,(n,v) in enumerate(zip(target_names,target_values)):
+        for i,(n,v) in enumerate(targets.iteritems()):
             tmp    = Target(n)
             tmp.df = self.df.loc[self.df['target']==v]
             tmp.label = self.sample_labels[n].label
@@ -103,8 +104,7 @@ class DeepLearningPlotter(object):
 
         # Create unique combinations of the targets in pairs 
         # (to calculate separation between classes)
-        target_names = [i.name for i in self.targets]
-        self.target_pairs = list(itertools.combinations(target_names,2))
+        self.target_pairs = list(itertools.combinations(targets.keys(),2))
 
         self.getSeparations()
 
@@ -131,42 +131,29 @@ class DeepLearningPlotter(object):
             hist.y_label = "A.U." if hist.normed else "Events"
             hist.format  = self.image_format
             hist.saveAs  = self.output_dir+"/hist_"+feature+"_"+self.date
-            hist.CMSlabel       = 'outer'
+            hist.CMSlabel = 'outer'
             hist.CMSlabelStatus = self.CMSlabelStatus
 
             hist.ratio.value  = "significance"
-            hist.ratio.ylabel = r"A/$\sqrt{\text{B}}$"
+            hist.ratio.ylabel = r"S/$\sqrt{\text{B}}$"
 
             hist.initialize()
 
-            # Add some extra text to the plot
-            n_extra_text = 0      # auto-adjust label based on number of extra text args
-
-            # Plot the distribution for each target with ratios between classes
-            for t,target in enumerate(self.targets):
-                ratios = ''
-                name = target.name
-                for pair in self.target_pairs:
-                    # only check with first entry to prevent double-plotting ratios
-                    if name == pair[0]: ratios = pair[1]
-                    elif name==pair[1]: ratios = pair[0]
+            for target in self.targets:
                 kwargs = {"draw_type":"step","edgecolor":target.color,"label":target.label}
+                hist.Add(target.df[feature],name=target.name,**kwargs)
 
-                hist.Add(target.df[feature],name=name,**kwargs)
+            # Add ratio plot
+            n_extra_text = 0      # auto-adjust label based on number of extra text args
+            for pair in self.target_pairs:
+                hist.ratio.Add(numerator=pair[0],denominator=pair[1],draw_type='errorbar')
 
-                # Add ratio plot
-                hist.ratio.Add(numerator=name,denominator=ratios,draw_type='errorbar')
+                name_a = pair[0] 
+                name_b = pair[1]
 
-
-            # Add text to display the separation between each class for the feature
-            for target in self.target_pairs:
-                name_a = target[0] 
-                name_b = target[1]
-
-                separation = self.separations[feature]['-'.join(target)]
-
+                separation = self.separations[feature]['-'.join(pair)]
                 hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(name_a,name_b,separation),
-                                    coords=[0.03,(0.80-0.08*n_extra_text)])
+                                    coords=[0.03,(0.97-0.08*n_extra_text)])
                 n_extra_text+=1
 
             p = hist.execute()
@@ -179,7 +166,7 @@ class DeepLearningPlotter(object):
         """Plot the separations between features of the NN"""
         listOfFeatures = list(self.listOfFeatures) #[self.variable_labels[f].label for f in self.listOfFeatures]
         listOfFeaturePairs = list(self.listOfFeaturePairs)
-        featurelabels = [self.variable_labels[f].label for f in listOfFeatures]
+        featurelabels = [self.variable_labels[f].label for f in self.listOfFeatures]
 
         nfeatures = len(listOfFeatures)
 
@@ -202,9 +189,9 @@ class DeepLearningPlotter(object):
             # make the bar plot
             fig,ax = plt.subplots()
             ax.barh(listOfFeatures, separations, align='center')
-            print ax.get_yticklabels()
             ax.set_yticks(listOfFeatures)
-            ax.set_yticklabels(featurelabels,fontsize=12)
+            ax.set_yticklabels([self.variable_labels[f].label for f in listOfFeatures],fontsize=12)
+            ax.set_xticklabels([f.get_text().replace("$","") for f in ax.get_xticklabels()])
 
             # CMS/COM Energy Label + Signal name
             self.stamp_cms(ax)
@@ -243,6 +230,7 @@ class DeepLearningPlotter(object):
                        weights=separations,vmin=0.0)
             cbar = plt.colorbar()
             cbar.ax.set_ylabel("Separation")
+            cbar.ax.set_yticklabels([i.get_text().replace("$","") for i in cbar.ax.get_yticklabels()])
 
             # shift location of ticks to center of the bins
             ax.set_xticks(np.arange(len(self.listOfFeatures))+0.5, minor=False)
@@ -279,6 +267,7 @@ class DeepLearningPlotter(object):
 
             heatmap1 = ax.pcolor(corrmat, **opts)
             cbar     = plt.colorbar(heatmap1, ax=ax)
+            cbar.ax.set_yticklabels([i.get_text().replace("$","") for i in cbar.ax.get_yticklabels()])
 
             labels = [self.variable_labels[feature].label for feature in corrmat.columns.values]
             # shift location of ticks to center of the bins
@@ -299,87 +288,77 @@ class DeepLearningPlotter(object):
         return
 
 
-    def prediction(self,train_data={},test_data={}):
-        """Plot the training and testing predictions"""
+
+    def prediction(self,train_data={},test_data={},i=0):
+        """
+        Plot the training and testing predictions. 
+        To save on memory, pass this TH1s directly, rather than raw values.
+        """
         self.msg_svc.INFO("DL : Plotting DNN prediction. ")
+        binning = [bb*0.1 for bb in range(11)]
 
-        values = {0:np.array([1,0,0]), 1:np.array([0,1,0]), 2:np.array([0,0,1])}
+        # Make a plot for each target value (e.g., QCD prediction to be QCD; Top prediction to be QCD, etc)
+        hist = Histogram1D()
 
-        # Plot all k-fold cross-validation results
-        for i,(train,trainY,test,testY) in enumerate(zip(train_data['X'],train_data['Y'],test_data['X'],test_data['Y'])):
+        hist.normed  = True  # compare shape differences (likely don't have the same event yield)
+        hist.format  = self.image_format
+        hist.saveAs  = "{0}/hist_DNN_prediction_kfold{1}_{2}".format(self.output_dir,i,self.date)
+        hist.binning = binning
+        hist.stacked = False
+        hist.x_label = "Prediction"
+        hist.y_label = "A.U."
+        hist.CMSlabel = 'outer'
+        hist.CMSlabelStatus   = self.CMSlabelStatus
 
-            # Make a plot for each target value (e.g., QCD prediction to be QCD; Top prediction to be QCD, etc)
-            for t_ind,tar in enumerate(self.targets):
+        hist.ratio.value  = "ratio"
+        hist.ratio.ylabel = "Test/Train"
 
-                hist = HepPlotter("histogram",1)
+        hist.initialize()
 
-                hist.ratio_plot = "ratio"
-                hist.normed  = True  # compare shape differences (likely don't have the same event yield)
-                hist.format  = self.image_format
-                hist.saveAs  = "{0}/hist_DNN_prediction_kfold{1}_target{2}_{3}".format(self.output_dir,i,t_ind,self.date)
-                hist.binning = [bb*0.1 for bb in range(11)]
-                hist.stacked = False
-                hist.x_label = "Prediction"
-                hist.y_label = "A.U."
-                hist.y_label_ratio = "Test/Train"
-                hist.CMSlabel = 'top left'
-                hist.CMSlabelStatus   = self.CMSlabelStatus
+        json_data = {}
+        for t,target in enumerate(self.targets):
 
-                hist.extra_text.Add("{0} Prediction".format(tar.name),coords=[0.03,0.80],fontsize=14)
-                if self.processlabel: hist.extra_text.Add(self.processlabel,coords=[0.03,0.72],fontsize=14)
+            target_value = target.target_value  # arrays for multiclassification 
 
-                hist.initialize()
+            train_t = train_data[target.name]
+            test_t  = test_data[target.name]
 
-                json_data = {}
-                for t,target in enumerate(self.targets):
+            train_kwargs = {"draw_type":"step","edgecolor":target.color,
+                            "label":target.label+" Train"}
+            test_kwargs  = {"draw_type":"stepfilled","edgecolor":target.color,
+                            "color":target.color,"linewidth":0,"alpha":0.5,
+                            "label":target.label+" Test"}
 
-                    target_value = values[target.target_value]  # arrays for multiclassification 
+            hist.Add(train_t,name=target.name+'_train',**train_kwargs) # Training
+            hist.Add(test_t,name=target.name+'_test',**test_kwargs)    # Testing
 
-                    train_t = train[np.where((trainY==target_value).all(axis=1))][:,t_ind] # get the t_ind prediction for this target 
-                    test_t  = test[np.where((testY==target_value).all(axis=1))][:,t_ind]
+            hist.ratio.Add(numerator=target.name+'_test',denominator=target.name+'_train')
 
-                    train_kwargs = {"draw_type":"step","edgecolor":target.color,
-                                    "label":target.label+" Train"}
-                    test_kwargs  = {"draw_type":"stepfilled","edgecolor":target.color,
-                                    "color":target.color,"linewidth":0,"alpha":0.5,
-                                    "label":target.label+" Test"}
+            ## Save data to JSON file
+            d_tr = hpt.hist2list(train_t)
+            d_te = hpt.hist2list(test_t)
+            json_data[target.name+"_train"] = {"binning":d_tr.bins.tolist(),
+                                               "content":d_tr.content.tolist()}
+            json_data[target.name+"_test"]  = {"binning":d_te.bins.tolist(),
+                                               "content":d_te.content.tolist()}
 
-                    ## Training
-                    hist.Add(train_t,name=target.name+'_train',ratios=[],**train_kwargs)
+        # calculate separation between predictions
+        for t,target in enumerate(self.target_pairs):
+            data_a = json_data[ target[0]+"_test" ]["content"]
+            data_b = json_data[ target[1]+"_test" ]["content"]
 
-                    ## Testing
-                    ratios = [(target.name+'_train',True)]
-                    hist.Add(test_t,name=target.name+'_test',ratios=ratios,**test_kwargs)
+            separation = util.getSeparation(data_a,data_b)
+            hist.extra_text.Add("Test Sep({0},{1}) = {2:.2f}".format(target[0],target[1],separation),
+                                coords=[0.03,(0.97-0.08*t)])
 
-                    ## Save data to JSON file
-                    json_data[target.name+"_train"] = {}
-                    json_data[target.name+"_test"]  = {}
-                    d_tr,b_tr = np.histogram(train_t,bins=hist.binning,normed=hist.normed)
-                    d_te,b_te = np.histogram(test_t,bins=hist.binning,normed=hist.normed)
+            json_data[ '-'.join(target)+"_test" ] = {"separation":separation}
 
-                    json_data[target.name+"_train"]["binning"] = b_tr.tolist()
-                    json_data[target.name+"_train"]["content"] = d_tr.tolist()
-                    json_data[target.name+"_test"]["binning"] = b_te.tolist()
-                    json_data[target.name+"_test"]["content"] = d_te.tolist()
+        p = hist.execute()
+        hist.savefig()
 
-                # calculate separation between predictions
-                for t,target in enumerate(self.target_pairs):
-                    data_a = json_data[ target[0]+"_test" ]["content"]
-                    data_b = json_data[ target[1]+"_test" ]["content"]
-
-                    separation = util.getSeparation(data_a,data_b)
-
-                    hist.extra_text.Add("Test Sep({0},{1}) = {2:.2f}".format(target[0],target[1],separation),
-                                        coords=[0.03,(0.80-0.08*t)])
-
-                    json_data[ '-'.join(target)+"_test" ]["separation"] = separation
-
-                p = hist.execute()
-                hist.savefig()
-
-                # save results to JSON file (just histogram values & bins) to re-make plots
-                with open("{0}.json".format(hist.saveAs), 'w') as outfile:
-                    json.dump(json_data, outfile)
+        # save results to JSON file (just histogram values & bins) to re-make plots
+        with open("{0}.json".format(hist.saveAs), 'w') as outfile:
+            json.dump(json_data, outfile)
 
         return
 
@@ -427,8 +406,6 @@ class DeepLearningPlotter(object):
         ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
                 fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
 
-        if self.processlabel: 
-            ax.text(0.03,0.82,self.processlabel)
         if accuracy:
             ax.text(0.03,0.75,r"Accuracy = {0:.2f}$\pm${1:.2f}".format(accuracy['mean'],accuracy['std']))
 
@@ -590,3 +567,4 @@ class DeepLearningPlotter(object):
 
 
 ## THE END ##
+

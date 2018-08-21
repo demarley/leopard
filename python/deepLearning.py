@@ -26,9 +26,11 @@ that are accessed via uproot.
 import json
 import util
 import datetime
+import collections
 
 from deepLearningPlotter import DeepLearningPlotter
 
+import ROOT
 import uproot
 import numpy as np
 import pandas as pd
@@ -85,6 +87,7 @@ class DeepLearning(object):
         self.test_data  = {}          # set later
         self.train_predictions = []   # set later
         self.test_predictions  = []   # set later
+        self.targets = collections.OrderedDict()
 
         ## Config options
         self.treename   = 'features'    # Name of TTree to access in ROOT file (via uproot)
@@ -117,7 +120,7 @@ class DeepLearning(object):
         self.activations   = ['elu']
         self.kfold_splits  = 2
         self.nHiddenLayers = 1
-        self.learning_rate = 1e-4
+        self.learning_rate = 1e-3
         self.earlystopping = {}              # {'monitor':'loss','min_delta':0.0001,'patience':5,'mode':'auto'}
 
 
@@ -180,13 +183,10 @@ class DeepLearning(object):
         self.load_hep_data()
         self.build_model()
 
-        # hard-coded :/
-        target_names  = ["bckg","signal"]
-        target_values = [0,1]
-        self.plotter.initialize(self.df,target_names,target_values)
+        self.plotter.initialize(self.df,self.targets)
 
         if self.runDiagnostics:
-            self.diagnostics(preTraining=True)     # save plots of the features and model architecture
+            self.diagnostics(pre=True)     # save plots of the features and model architecture
 
         self.msg_svc.INFO("DL : Train the model")
         self.train_model()
@@ -195,7 +195,7 @@ class DeepLearning(object):
         self.save_model()
 
         if self.runDiagnostics:
-            self.diagnostics(postTraining=True)    # save plots of the performance in training/testing
+            self.diagnostics(post=True)    # save plots of the performance in training/testing
 
         return
 
@@ -203,7 +203,6 @@ class DeepLearning(object):
     def inference(self,data=None):
         """
         Run inference of the NN model
-        User responsible for diagnostics if not doing training: 
         -> save all predictions (& labels) using 'self.test_predictions'
            then call individual functions:
               plot_features()   -> compare features of the inputs
@@ -289,11 +288,12 @@ class DeepLearning(object):
             Y_train = Y[train]
             Y_test  = Y[test]
 
-            # -- store test/train data from each k-fold to compare later
-            self.test_data['X'].append(X[test])
-            self.test_data['Y'].append(Y_test)
-            self.train_data['X'].append(X[train])
-            self.train_data['Y'].append(Y_train)
+            # -- store test/train data from each k-fold as histograms (to compare later)
+            h_tests  = {}
+            h_trains = {}
+            for n,v in self.targets.iteritems():
+                h_tests[n]  = ROOT.TH1D("test_{0}_{1}".format(n,ind),"test_{0}_{1}".format(n,ind),10,0,10)
+                h_trains[n] = ROOT.TH1D("train_{0}_{1}".format(n,ind),"train_{0}_{1}".format(n,ind),10,0,10)
 
             ## Fit the model to training data & save the history
             self.model.train()
@@ -304,24 +304,46 @@ class DeepLearning(object):
             self.histories.append(e_losses)
 
             # evaluate the model
-            self.msg_svc.DEBUG("DL :     + Evaluate the model: ")
+            self.msg_svc.INFO("DL : Evaluate the model: ")
             self.model.eval()
 
             # Evaluate training sample
             self.msg_svc.INFO("DL : Predictions from training sample")
-            train_predictions = self.predict(X[train])
-            self.train_predictions.append( train_predictions )
+            train_predictions = self.predict(X[train]).data.cpu().numpy()
+
+            for p,v in zip(train_predictions,Y_train):
+                for n,val in self.targets.iteritems():
+                    if val==v: h_trains[n].Fill(p)
+            train_predictions = None # clear the value from memory
 
             # Evaluate test sample
             self.msg_svc.INFO("DL : Predictions from testing sample")
-            test_predictions  = self.predict(X[test])
-            self.test_predictions.append( test_predictions )
+            test_predictions  = self.predict(X[test]).data.cpu().numpy()
+
+            for p,v in zip(test_predictions,Y_train):
+                for n,val in self.targets.iteritems():
+                    if val==v: h_tests[n].Fill(p)
 
             # Make ROC curve from test sample
             self.msg_svc.INFO("DL : Make ROC curves")
-            fpr,tpr,_ = roc_curve( Y[test], test_predictions )
-            self.fpr.append(fpr)
-            self.tpr.append(tpr)
+            fprs = None
+            tprs = None
+            for beg_i in range(0, len(Y[test]), self.batch_size):
+                fpr,tpr,_ = roc_curve(Y[test][beg_i:beg_i+self.batch_size],test_predictions[beg_i:beg_i+self.batch_size])
+                try: fprs+=fpr
+                except: fprs=fpr
+                try: tprs+=tpr
+                except: tprs=tpr
+            self.fpr.append(fprs)
+            self.tpr.append(tprs)
+
+            # Plot the predictions to compare test/train
+            self.msg_svc.INFO("DL : Plot the train/test predictions")
+            h_test = []
+            self.plotter.prediction(h_trains,h_tests,ind)   # compare DNN prediction for different targets
+
+            # reset some objects
+            test_predictions = None
 
         self.msg_svc.INFO("DL :   Finished K-Fold cross-validation: ")
         self.accuracy = {'mean':np.mean(cvpredictions),'std':np.std(cvpredictions)}
@@ -332,13 +354,13 @@ class DeepLearning(object):
 
     def predict(self,data=None):
         """Return the prediction from a test sample"""
-        self.msg_svc.DEBUG("DL : Get the DNN prediction")
+        self.msg_svc.INFO("DL : Get the DNN prediction")
         if data is None:
             self.msg_svc.ERROR("DL : predict() given NoneType data. Returning -999.")
             return -999.
         data = torch.from_numpy(data)
         self.model.eval()
-        result = self.model( Variable(data).cuda() )
+        result = self.model( Variable(data,volatile=True).cuda() )
 
         return result
 
@@ -383,33 +405,26 @@ class DeepLearning(object):
         return
 
 
-    def diagnostics(self,preTraining=False,postTraining=False):
+    def diagnostics(self,pre=False,post=False):
         """Diagnostic tests of the NN"""
 
         self.msg_svc.INFO("DL : Diagnostics")
 
         # Diagnostics before the training
-        if preTraining:
-            self.msg_svc.INFO("DL : -- pre-training")
+        if pre:
+            self.msg_svc.INFO("DL : -- pre-training plots")
             self.plotter.features()                        # compare features for different targets
             self.plotter.correlation()                     # correlations of features
             self.plotter.separation()                      # seprations between features
 
         # post training/testing
-        if postTraining:
-            self.msg_svc.INFO("DL : -- post-training")
-
-            self.msg_svc.INFO("DL : -- post-training :: PREDICTIONS ")
-            train = {'X':self.train_predictions,'Y':self.train_data['Y']}
-            test  = {'X':self.test_predictions,'Y':self.test_data['Y']}
-            self.plotter.prediction(train,test)   # compare DNN prediction for different targets
-
-            self.msg_svc.INFO("DL : -- post-training :: ROC")
+        if post:
+            self.msg_svc.INFO("DL : -- post-training plots")
             self.plotter.ROC(self.fpr,self.tpr,self.accuracy)  # ROC curve for signal vs background
-            self.msg_svc.INFO("DL : -- post-training :: History")
             self.plotter.loss_history(self.histories) # loss as a function of epoch
 
         return
 
 
 ## THE END ##
+

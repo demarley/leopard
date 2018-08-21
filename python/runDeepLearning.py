@@ -103,7 +103,8 @@ dnn.activations   = config.activation.split(',')
 dnn.kfold_splits  = config.kfold_splits
 dnn.nHiddenLayers = config.nHiddenLayers
 dnn.earlystopping = {'monitor':'loss','min_delta':0.0001,'patience':10,'mode':'auto'}
-
+dnn.targets['signal'] = 1
+dnn.targets['bckg']   = 0
 
 ## inference/training
 output = "{0}/{1}/{2}".format( config.output_path,output_dir,hep_data_name)
