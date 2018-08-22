@@ -43,6 +43,7 @@ except KeyError:
     import labels as hpl
     import tools as hpt
 
+import ROOT
 import plotlabels as plb
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
@@ -232,7 +233,7 @@ class DeepLearningPlotter(object):
             ax.barh(listOfFeatures, separations, align='center')
             ax.set_yticks(listOfFeatures)
             ax.set_yticklabels([self.variable_labels[f].label for f in listOfFeatures],fontsize=12)
-            ax.set_xticklabels([f.get_text().replace("$","") for f in ax.get_xticklabels()])
+            ax.set_xticklabels([self.formatter(i) for i in ax.get_xticks()])
 
             # CMS/COM Energy Label + Signal name
             self.stamp_cms(ax)
@@ -350,9 +351,10 @@ class DeepLearningPlotter(object):
         hist.y_label = "A.U."
         hist.CMSlabel = 'outer'
         hist.CMSlabelStatus   = self.CMSlabelStatus
+        hist.legend['fontsize'] = 18
 
         hist.ratio.value  = "ratio"
-        hist.ratio.ylabel = "Test/Train"
+        hist.ratio.ylabel = "Train/Test"
 
         hist.initialize()
 
@@ -373,7 +375,7 @@ class DeepLearningPlotter(object):
             hist.Add(train_t,name=target.name+'_train',**train_kwargs) # Training
             hist.Add(test_t,name=target.name+'_test',**test_kwargs)    # Testing
 
-            hist.ratio.Add(numerator=target.name+'_test',denominator=target.name+'_train')
+            hist.ratio.Add(numerator=target.name+'_train',denominator=target.name+'_test')
 
             ## Save data to JSON file
             if isinstance(train_t,ROOT.TH1):
@@ -383,6 +385,11 @@ class DeepLearningPlotter(object):
                                                    "content":d_tr.content.tolist()}
                 json_data[target.name+"_test"]  = {"binning":d_te.bins.tolist(),
                                                    "content":d_te.content.tolist()}
+            else:
+                json_data[target.name+"_train"] = {"binning":hist.binning,
+                                                   "content":train_t}
+                json_data[target.name+"_test"]  = {"binning":hist.binning,
+                                                   "content":test_t}
 
         # calculate separation between predictions
         for t,target in enumerate(self.target_pairs):
@@ -437,8 +444,8 @@ class DeepLearningPlotter(object):
         ax.set_xlim([0.0, 1.0])
         ax.set_ylim([0.0, 1.5])
 
-        ax.set_xlabel(r'Signal',ha='right',va='top',position=(1,0))
-        ax.set_ylabel(r'Background',ha='right',va='bottom',position=(0,1))
+        ax.set_xlabel(r'Background',ha='right',va='top',position=(1,0))
+        ax.set_ylabel(r'Signal',ha='right',va='bottom',position=(0,1))
 
         ax.set_xticklabels([self.formatter(i) for i in ax.get_xticks()],fontsize=20)
         ax.set_yticklabels([self.formatter(i) for i in ax.get_yticks()],fontsize=20)
@@ -507,7 +514,7 @@ class DeepLearningPlotter(object):
             leg = ax.legend(loc=1,numpoints=1,fontsize=12,ncol=1,columnspacing=0.3)
             leg.draw_frame(False)
 
-            plt.savefig(self.output_dir+'/loss_epochs_{0}.{1}'.format(self.date,self.image_format),
+            plt.savefig(self.output_dir+'/{0}_epochs_{1}.{2}'.format(key,self.date,self.image_format),
                         format=self.image_format,bbox_inches='tight',dpi=200)
             plt.close()
 

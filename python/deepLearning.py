@@ -135,31 +135,17 @@ class DeepLearning(object):
             output_act       = self.activations[1]
             self.activations = [first_hidden_act for _ in range(self.nHiddenLayers+1)]+[output_act]
 
+        print self.activations
+        print self.nNodes
+        print self.nHiddenLayers
+
         return
 
 
     ## Single functions to run all of the necessary pieces
     def training(self):
         """Train NN model"""
-        self.load_hep_data()
-        self.build_model()
-
-        self.plotter.initialize(self.df,self.targets)
-
-        if self.runDiagnostics:
-            self.diagnostics(pre=True)     # save plots of the features and model architecture
-
-        self.msg_svc.INFO("DL : Train the model")
-        self.train_model()
-
-        self.msg_svc.INFO("DL : SAVE MODEL")
-        self.save_model()
-
-        if self.runDiagnostics:
-            self.diagnostics(post=True)    # save plots of the performance in training/testing
-
-        return
-
+        pass
 
     def inference(self,data=None):
         """
@@ -228,7 +214,7 @@ class DeepLearning(object):
         df[self.features] = scaler.fit_transform(df[self.features])
 
         # Make the dataset sizes equal (trim away some background)
-        fraction=0.001
+        fraction=0.01
         signal = df[ (df.target==1)&(df.AK4_CSVv2>=0) ]
         bckg   = df[ (df.target==0)&(df.AK4_CSVv2>=0) ]
         backg  = bckg.sample(frac=1)[0:signal.shape[0]]    # equal statistics (& shuffle first!)
@@ -236,7 +222,7 @@ class DeepLearning(object):
         # re-combine into dataframe and shuffle
         self.df = pd.concat( [backg.sample(frac=fraction),signal.sample(frac=fraction)] ).sample(frac=1)
 
-        df = None
+        del df
         self.metadata = {'metadata':file.get('metadata'),      # names of samples, target values, etc.
                          'offsets':[-1.*i for i in scaler.mean_],
                          'scales':[1./i for i in scaler.scale_]}
