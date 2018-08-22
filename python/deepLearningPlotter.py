@@ -343,7 +343,7 @@ class DeepLearningPlotter(object):
 
         hist.normed  = True  # compare shape differences (likely don't have the same event yield)
         hist.format  = self.image_format
-        hist.saveAs  = "{0}/hist_DNN_prediction_{2}".format(self.output_dir,self.date)
+        hist.saveAs  = "{0}/hist_DNN_prediction_{1}".format(self.output_dir,self.date)
         hist.binning = binning
         hist.stacked = False
         hist.x_label = "Prediction"
