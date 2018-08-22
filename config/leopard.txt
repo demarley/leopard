@@ -1,3 +1,4 @@
+framework keras
 runTraining True
 runInference False
 hep_data /data/demarley/b2g/leopard/data/ttbar.root
@@ -8,7 +9,7 @@ method binary
 nHiddenLayers 4
 nNodes 40
 epochs 5
-batch_size 128
+batch_size 64
 loss binary_crossentropy
 activation relu,sigmoid
 optimizer adam

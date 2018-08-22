@@ -45,6 +45,7 @@ except KeyError:
 
 import plotlabels as plb
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 
 
 class Target(object):
@@ -65,6 +66,7 @@ class DeepLearningPlotter(object):
         """Give default values to member variables"""
         self.date = date.today().strftime('%d%b%Y')
 
+        self.formatter       = FormatStrFormatter('%g')
         self.betterColors    = hpt.betterColors()['linecolors']
         self.sample_labels   = plb.sample_labels()
         self.variable_labels = plb.variable_labels()
@@ -158,6 +160,45 @@ class DeepLearningPlotter(object):
 
             p = hist.execute()
             hist.savefig()
+
+
+        # plot the 2D features
+        for hi,featurepairs in enumerate(self.listOfFeaturePairs):
+            xfeature = featurepairs[0]
+            yfeature = featurepairs[1]
+
+            for target in self.targets:
+                hist = Histogram2D()
+
+                xbins = self.variable_labels[xfeature].binning
+                ybins = self.variable_labels[yfeature].binning
+
+                hist.colormap = 'default'
+                hist.colorbar['title'] = "Events"
+
+                hist.binning = [xbins.tolist(),ybins.tolist()]
+                hist.x_label = self.variable_labels[xfeature].label
+                hist.y_label = self.variable_labels[yfeature].label
+                hist.format  = self.image_format
+                hist.saveAs  = self.output_dir+"/hist2d_"+target.name+"_"+xfeature+"-"+yfeature+"_"+self.date
+                hist.CMSlabel = 'outer'
+                hist.CMSlabelStatus = self.CMSlabelStatus
+                hist.logplot['data'] = True
+
+                hist.initialize()
+
+                h,binsx,binsy = np.histogram2d(target.df[xfeature],target.df[yfeature],bins=[xbins,ybins])
+                dummyx = []
+                dummyy = []
+                for x in 0.5*(binsx[:-1]+binsx[1:]):
+                    for y in 0.5*(binsy[:-1]+binsy[1:]):
+                        dummyx.append(x)
+                        dummyy.append(y)
+
+                hist.Add([dummyx,dummyy],weights=h.flatten(),name=target.name)
+
+                p = hist.execute()
+                hist.savefig()
 
         return
 
@@ -302,7 +343,7 @@ class DeepLearningPlotter(object):
 
         hist.normed  = True  # compare shape differences (likely don't have the same event yield)
         hist.format  = self.image_format
-        hist.saveAs  = "{0}/hist_DNN_prediction_kfold{1}_{2}".format(self.output_dir,i,self.date)
+        hist.saveAs  = "{0}/hist_DNN_prediction_{2}".format(self.output_dir,self.date)
         hist.binning = binning
         hist.stacked = False
         hist.x_label = "Prediction"
@@ -335,12 +376,13 @@ class DeepLearningPlotter(object):
             hist.ratio.Add(numerator=target.name+'_test',denominator=target.name+'_train')
 
             ## Save data to JSON file
-            d_tr = hpt.hist2list(train_t)
-            d_te = hpt.hist2list(test_t)
-            json_data[target.name+"_train"] = {"binning":d_tr.bins.tolist(),
-                                               "content":d_tr.content.tolist()}
-            json_data[target.name+"_test"]  = {"binning":d_te.bins.tolist(),
-                                               "content":d_te.content.tolist()}
+            if isinstance(train_t,ROOT.TH1):
+                d_tr = hpt.hist2list(train_t)
+                d_te = hpt.hist2list(test_t)
+                json_data[target.name+"_train"] = {"binning":d_tr.bins.tolist(),
+                                                   "content":d_tr.content.tolist()}
+                json_data[target.name+"_test"]  = {"binning":d_te.bins.tolist(),
+                                                   "content":d_te.content.tolist()}
 
         # calculate separation between predictions
         for t,target in enumerate(self.target_pairs):
@@ -377,37 +419,36 @@ class DeepLearningPlotter(object):
         ax.plot([0,1],[0,1],ls='--',label='No Discrimination',lw=2,c='gray')
         ax.axhline(y=1,lw=1,c='k',ls='-')
 
-        for ft,(fpr,tpr) in enumerate(zip(fprs,tprs)):
-            # Plot ROC curve
-            roc_auc = auc(fpr,tpr)
-            ax.plot(fpr,tpr,label='K-fold {0} (AUC = {1:.2f})'.format(ft,roc_auc),lw=2)
-
+        # Plot ROC curve
+        if isinstance(fprs[0],list):
+            for ft,(fpr,tpr) in enumerate(zip(fprs,tprs)):
+                roc_auc = auc(fpr,tpr)
+                ax.plot(fpr,tpr,label='K-fold {0} (AUC = {1:.2f})'.format(ft,roc_auc),lw=2)
+                # save ROC curve to CSV file (to plot later)
+                csv = [ "{0},{1}".format(fp,tp) for fp,tp in zip(fpr,tpr) ]
+                util.to_csv("{0}_{1}.csv".format(saveAs,ft),csv)
+        else:
+            roc_auc = auc(fprs,tprs)
+            ax.plot(fprs,tprs,label='AUC = {0:.2f}'.format(roc_auc),lw=2)
             # save ROC curve to CSV file (to plot later)
-            outfile_name = "{0}_{1}.csv".format(saveAs,ft)
-            csv = [ "{0},{1}".format(fp,tp) for fp,tp in zip(fpr,tpr) ]
-            util.to_csv(outfile_name,csv)
+            csv = [ "{0},{1}".format(fp,tp) for fp,tp in zip(fprs,tprs) ]
+            util.to_csv("{0}.csv".format(saveAs),csv)
 
         ax.set_xlim([0.0, 1.0])
         ax.set_ylim([0.0, 1.5])
 
-        ax.set_xlabel(r'$\epsilon$(anti-top)',ha='right',va='top',position=(1,0))
-        ax.set_ylabel(r'$\epsilon$(top)',ha='right',va='bottom',position=(0,1))
+        ax.set_xlabel(r'Signal',ha='right',va='top',position=(1,0))
+        ax.set_ylabel(r'Background',ha='right',va='bottom',position=(0,1))
+
+        ax.set_xticklabels([self.formatter(i) for i in ax.get_xticks()],fontsize=20)
+        ax.set_yticklabels([self.formatter(i) for i in ax.get_yticks()],fontsize=20)
 
         ## CMS/COM Energy Label
-        cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
-        cms_stamp.coords = [0.03,0.97]
-        cms_stamp.fontsize = 16
-        ax.text(cms_stamp.coords[0],cms_stamp.coords[1],cms_stamp.text,fontsize=cms_stamp.fontsize,
-                ha=cms_stamp.ha,va=cms_stamp.va,transform=ax.transAxes)
-
-        energy_stamp    = hpl.EnergyStamp()
-        energy_stamp.coords = [0.03,0.90]
-        energy_stamp.fontsize = 16
-        ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
-                fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
+        self.stamp_cms(ax)
+        self.stamp_energy(ax)
 
         if accuracy:
-            ax.text(0.03,0.75,r"Accuracy = {0:.2f}$\pm${1:.2f}".format(accuracy['mean'],accuracy['std']))
+            ax.text(0.97,0.03,r"Accuracy = {0:.2f}$\pm${1:.2f}".format(accuracy['mean'],accuracy['std']),ha='right')
 
         leg = ax.legend()
         leg.draw_frame(False)
@@ -418,72 +459,57 @@ class DeepLearningPlotter(object):
         return
 
 
-    def plot_loss_history(self,history,ax=None,index=-1):
+    def plot_history(self,history,ax=None,key='loss',index=-1):
         """Draw history of model"""
         try:
-            loss = history.history['loss']
+            loss     = history.history[key]
+            val_loss = history.history.get('val_'+key)
         except:
-            loss = history
-        x     = range(1,len(loss)+1)
-        label = 'Loss {0}'.format(index) if index>=0 else 'Loss'
-        ax.plot(x,loss,label=label)
+            loss     = history
+            val_loss = None
 
-        csv = [ "{0},{1}".format(i,j) for i,j in zip(x,loss) ]
+        x = range(1,len(loss)+1)
+        label = key.title()
+        if index>=0: label += ' {0}'.format(index)
+        ax.plot(x,loss,label=label)
+        csv = [ "{0},{1}\n".format(i,j) for i,j in zip(x,loss) ]
+
+        if val_loss is not None:
+            label = 'Validation {0}'.format(index) if index>=0 else 'Validation'
+            ax.plot(x,val_loss,label=label)
+            csv += [ "{0},{1}\n".format(i,j) for i,j in zip(x,val_loss) ]
 
         return csv
 
 
-    def loss_history(self,history,kfold=0,val_loss=0.0):
-        """Plot loss as a function of epoch for model"""
+    def history(self,history,kfold=-1):
+        """Plot history as a function of epoch for model"""
         self.msg_svc.INFO("DL : Plotting loss as a function of epoch number.")
 
-        saveAs = "{0}/loss_epochs_{1}".format(self.output_dir,self.date)
-        all_histories = type(history)==list
+        for key in ['loss','acc']:
+            fig,ax = plt.subplots()
 
-        # draw the loss curve
-        fig,ax = plt.subplots()
-
-        # also save the data to a CSV file
-        if all_histories:
-            for i,h in enumerate(history):
-                csv = self.plot_loss_history(h,ax=ax,index=i)
-                filename = "{0}_{1}.csv".format(saveAs,i)
-                util.to_csv(filename,csv)
-        else:
-            csv = self.plot_loss_history(history,ax=ax)
+            saveAs   = "{0}/history_{1}_{2}".format(self.output_dir,key,self.date)
+            csv      = self.plot_history(history,ax=ax,key=key)
             filename = "{0}.csv".format(saveAs)
             util.to_csv(filename,csv)
 
-        ax.set_xlabel('Epoch',fontsize=22,ha='right',va='top',position=(1,0))
-        ax.set_xticklabels(["{0:.1f}".format(i) for i in ax.get_xticks()],fontsize=22)
-        ax.set_ylabel('Loss',fontsize=22,ha='right',va='bottom',position=(0,1))
-        ax.set_yticklabels(['']+["{0:.1f}".format(i) for i in ax.get_yticks()[1:-1]]+[''],fontsize=22)
+            ax.set_xlabel('Epoch',fontsize=22,ha='right',va='top',position=(1,0))
+            ax.set_ylabel(key.title(),fontsize=22,ha='right',va='bottom',position=(0,1))
 
+            ax.set_xticklabels([self.formatter(i) for i in ax.get_xticks()],fontsize=20)
+            ax.set_yticklabels(['']+[self.formatter(i) for i in ax.get_yticks()[1:-1]]+[''],fontsize=20)
 
-        ## CMS/COM Energy Label
-        cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
-        cms_stamp.coords = [0.03,0.97]
-        cms_stamp.fontsize = 18
-        ax.text(cms_stamp.coords[0],cms_stamp.coords[1],cms_stamp.text,fontsize=cms_stamp.fontsize,
-                ha=cms_stamp.ha,va=cms_stamp.va,transform=ax.transAxes)
+            ## CMS/COM Energy Label
+            self.stamp_cms(ax)
+            self.stamp_energy(ax)
 
-        energy_stamp    = hpl.EnergyStamp()
-        energy_stamp.coords = [0.03,0.90]
-        energy_stamp.fontsize = 18
-        ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
-                fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
+            leg = ax.legend(loc=1,numpoints=1,fontsize=12,ncol=1,columnspacing=0.3)
+            leg.draw_frame(False)
 
-        text_args = {'ha':'left','va':'top','fontsize':18,'transform':ax.transAxes}
-        text = "Validation Loss = {0}; {1} K-folds".format(val_loss,len(history)) if all_histories else "Validation Loss = {0}".format(val_loss)
-        ax.text(0.03,0.76,text,**text_args)
-
-        leg = ax.legend(loc=1,numpoints=1,fontsize=12,ncol=1,columnspacing=0.3)
-        leg.draw_frame(False)
-
-        plt.savefig(self.output_dir+'/loss_epochs_{0}_{1}.{2}'.format(kfold,self.date,self.image_format),
-                    format=self.image_format,bbox_inches='tight',dpi=200)
-        plt.close()
-
+            plt.savefig(self.output_dir+'/loss_epochs_{0}.{1}'.format(self.date,self.image_format),
+                        format=self.image_format,bbox_inches='tight',dpi=200)
+            plt.close()
 
         return
 
@@ -546,28 +572,17 @@ class DeepLearningPlotter(object):
         return
 
 
-    def stamp_energy(self,axis):
-        energy_stamp    = hpl.EnergyStamp()
-        energy_stamp.ha = 'right'
-        energy_stamp.coords = [0.99,1.00]
-        energy_stamp.fontsize = 16
-        energy_stamp.va = 'bottom'
-        axis.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
-                fontsize=energy_stamp.fontsize,ha=energy_stamp.ha,va=energy_stamp.va,
-                transform=axis.transAxes)
+    def stamp_energy(self,axis,ha='right',coords=[0.99,1.00],fontsize=16,va='bottom'):
+        energy_stamp = hpl.EnergyStamp()
+        axis.text(coords[0],coords[1],energy_stamp.text,fontsize=fontsize,ha=ha,va=va,transform=axis.transAxes)
 
         return
 
-    def stamp_cms(self,axis):
+    def stamp_cms(self,axis,ha='left',va='bottom',coords=[0.02,1.00],fontsize=16):
         cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
-        cms_stamp.coords = [0.02,1.00]
-        cms_stamp.fontsize = 16
-        cms_stamp.va = 'bottom'
-        axis.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
-                ha=cms_stamp.ha,va=cms_stamp.va,transform=axis.transAxes)
+        axis.text(coords[0],coords[1],cms_stamp.text,fontsize=fontsize,ha=ha,va=va,transform=axis.transAxes)
 
         return
 
 
 ## THE END ##
-

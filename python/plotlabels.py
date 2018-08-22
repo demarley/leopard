@@ -38,7 +38,7 @@ def variable_labels():
     _eta  = r'$\eta$'
     _T    = r'$_{\text{T}}$ [GeV]'
     _mass = 'Mass [GeV]'
-    bdisc_bins = array('d',[-1.1,-0.9]+[i*0.1 for i in range(11)])  # default value = -1
+    bdisc_bins = array('d',[i*0.1 for i in range(11)])  # default value = -1
 
     variables = {}
 

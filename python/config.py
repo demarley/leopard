@@ -57,6 +57,7 @@ class Config(object):
 
     def setAttributes(self):
         """Set attributes of class for the configurations"""
+        setattr(self,'framework',    self.get('framework') )
         setattr(self,'runTraining',  util.str2bool( self.get('runTraining') ))
         setattr(self,'runInference', util.str2bool( self.get('runInference') ))
         setattr(self,'hep_data',     self.get('hep_data'))
@@ -84,7 +85,8 @@ class Config(object):
 
     def set_defaults(self):
         """Set default values for configurations"""
-        defaults = {'runTraining':False,
+        defaults = {'framework':'keras',
+                    'runTraining':False,
                     'runInference': False,
                     'hep_data':None,
                     'treename':"",

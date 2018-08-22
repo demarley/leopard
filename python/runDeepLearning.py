@@ -1,6 +1,6 @@
 """
 Created:        12 November  2016
-Last Updated:   25 February  2018
+Last Updated:   21 August    2018
 
 Dan Marley
 daniel.edison.marley@cernSPAMNOT.ch
@@ -20,7 +20,8 @@ import util
 from config import Config
 from collections import Counter
 from time import strftime,localtime
-from deepLearning import DeepLearning
+from deepLearningTorch import DeepLearningTorch
+from deepLearningKeras import DeepLearningKeras
 
 
 print
@@ -80,7 +81,15 @@ hep_data_name = config.hep_data.split('/')[-1].split('.')[0]
 
 
 ## Setup Deep Learning class
-dnn = DeepLearning()
+dnn = None
+if config.framework=='pytorch':
+    dnn = DeepLearningTorch()
+elif config.framework=='keras':
+    dnn = DeepLearningKeras()
+else:
+    print " ERROR : Framework {0} is unsupported.  Consider using 'pytorch' or 'keras'".format(config.framework)
+    sys.exit(1)
+
 
 dnn.hep_data   = config.hep_data
 dnn.model_name = config.dnn_data
@@ -109,9 +118,9 @@ dnn.targets['bckg']   = 0
 ## inference/training
 output = "{0}/{1}/{2}".format( config.output_path,output_dir,hep_data_name)
 if config.runTraining:
-    output += "/training/"
+    output += "/training/{0}/".format(config.framework)
 else:
-    output += "/inference/"
+    output += "/inference/{0}".format(config.framework)
 dnn.output_dir = output
 
 if not os.path.isdir(output):

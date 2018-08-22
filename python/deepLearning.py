@@ -30,51 +30,19 @@ import collections
 
 from deepLearningPlotter import DeepLearningPlotter
 
-import ROOT
 import uproot
 import numpy as np
 import pandas as pd
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as tf
-from torch.autograd import Variable
-
-from sklearn.model_selection import train_test_split,StratifiedKFold
-from sklearn.metrics import roc_curve, auc
-
-
-# fix random seed for reproducibility
-seed = 2018
-np.random.seed(seed)
-
-
-class LeopardNet(nn.Module):
-    """Neural Network for Leopard in PyTorch
-       Adapted from (16 August 2018)
-         https://github.com/thongonary/surf18-tutorial/blob/master/tuto-8-torch.ipynb
-    """
-    def __init__(self,layers):
-        super(LeopardNet,self).__init__()
-        self.dense = nn.ModuleList()
-        for l,layer in enumerate(layers):
-            self.dense.append( nn.Linear(layer['in'],layer['out']) )
-    
-    def forward(self, x): 
-        """All the computation steps of the input are defined in this function"""
-        nlayers = len(self.dense)
-        for i,d in enumerate(self.dense):
-            x = d(x)
-            x = tf.relu(x) if i!=nlayers-1 else tf.sigmoid(x)
-
-        return x
-    
-
+from sklearn.preprocessing import StandardScaler
 
 class DeepLearning(object):
     """Deep Learning base class"""
     def __init__(self):
         self.date = datetime.date.today().strftime('%d%b%Y')
+
+        # fix random state for reproducibility
+        self.seed = 2018
+        np.random.seed(self.seed)
 
         ## Handling NN objects and data -- set in the class
         self.df  = None          # dataframe containing physics information
@@ -85,8 +53,6 @@ class DeepLearning(object):
         self.histories = []           # model history (for ecah k-fold)
         self.train_data = {}          # set later
         self.test_data  = {}          # set later
-        self.train_predictions = []   # set later
-        self.test_predictions  = []   # set later
         self.targets = collections.OrderedDict()
 
         ## Config options
@@ -100,10 +66,6 @@ class DeepLearning(object):
         self.runDiagnostics = True      # Make plots pre/post training
         self.verbose_level  = 'INFO'
         self.verbose = False
-
-        ## PyTorch objects
-        self.loss_fn   = None  # pytorch loss function
-        self.torch_opt = None  # pytorch optimizer
 
         ## NN architecture (from config)
         self.loss    = 'binary_crossentropy' # preferred for binary classification
@@ -120,16 +82,16 @@ class DeepLearning(object):
         self.activations   = ['elu']
         self.kfold_splits  = 2
         self.nHiddenLayers = 1
-        self.learning_rate = 1e-3
+        self.learning_rate = 1e-4
         self.earlystopping = {}              # {'monitor':'loss','min_delta':0.0001,'patience':5,'mode':'auto'}
 
 
-    def initialize(self):   #,config):
+    def initialize(self):
         """Initialize a few parameters after they've been set by user"""
         self.msg_svc       = util.VERBOSE()
         self.msg_svc.level = self.verbose_level
         self.msg_svc.initialize()
-        self.verbose = not self.msg_svc.compare(self.verbose_level,"WARNING") # verbose if level is <"WARNING"
+        self.verbose = self.verbose_level=="DEBUG"
 
         # Set name for the model, if needed
         if not self.model_name:
@@ -144,7 +106,6 @@ class DeepLearning(object):
         self.fpr = []  # false positive rate
         self.tpr = []  # true positive rate
         self.histories  = []
-
 
         ## -- Plotting framework
         self.msg_svc.INFO("DL :  >> Store output in {0}".format(self.output_dir))
@@ -231,138 +192,23 @@ class DeepLearning(object):
     ## Specific functions to perform training/inference tasks
     def build_model(self):
         """Construct the NN model -- only Keras support for now"""
-        self.msg_svc.INFO("DL : Build the neural network model")
-
-        ## Declare the model
-        layers = []
-        layers.append( {'in':int(self.input_dim),'out':int(self.nNodes[0])} )
-        for i,n in enumerate(self.nNodes):
-            if i==len(self.nNodes)-1: continue
-            layers.append( {'in':int(n),'out':int(self.nNodes[i+1])} )
-        layers.append( {'in':int(self.nNodes[-1]),'out':self.output_dim} )
-
-        self.model = LeopardNet(layers)
-        self.model.cuda()
-
-        self.loss_fn   = torch.nn.BCELoss()
-        self.torch_opt = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate) #1e-4)
-
-        return
-
-
-    def train_epoch(self,X,Y):
-        """"""
-        losses = []
-        for beg_i in range(0, len(X), self.batch_size):
-            x_batch = torch.from_numpy(X[beg_i:beg_i+self.batch_size,:])
-            y_batch = torch.from_numpy(Y[beg_i:beg_i+self.batch_size])
-            x_batch = Variable(x_batch).cuda()
-            y_batch = Variable(y_batch).float().unsqueeze_(-1).cuda()  # modify dimensions (X,) -> (X,1)
-
-            self.torch_opt.zero_grad()
-
-            y_hat = self.model(x_batch)         # forward
-            loss = self.loss_fn(y_hat, y_batch) # compute loss
-            loss.backward()                     # compute gradients
-            self.torch_opt.step()               # update weights
-
-            losses.append(loss.data.cpu().numpy())
-
-        return losses
-
-
+        pass
 
     def train_model(self):
         """Setup for training the model using k-fold cross-validation"""
-        X = self.df[self.features].values
-        Y = self.df['target'].values
+        pass
 
-        kfold = StratifiedKFold(n_splits=self.kfold_splits, shuffle=True, random_state=seed)
-        nsplits = kfold.get_n_splits(X,Y)
-        cvpredictions = []                 # compare outputs from each cross-validation
+    def load_model(self,from_lwtnn=False):
+        """Load existing model to make plots or predictions"""
+        pass
 
-        self.msg_svc.INFO("DL :   Fitting K-Fold cross validations")
-        for ind,(train,test) in enumerate(kfold.split(X,Y)):
-            self.msg_svc.INFO("DL :   - Fitting K-Fold {0}".format(ind))
-
-            Y_train = Y[train]
-            Y_test  = Y[test]
-
-            # -- store test/train data from each k-fold as histograms (to compare later)
-            h_tests  = {}
-            h_trains = {}
-            for n,v in self.targets.iteritems():
-                h_tests[n]  = ROOT.TH1D("test_{0}_{1}".format(n,ind),"test_{0}_{1}".format(n,ind),10,0,10)
-                h_trains[n] = ROOT.TH1D("train_{0}_{1}".format(n,ind),"train_{0}_{1}".format(n,ind),10,0,10)
-
-            ## Fit the model to training data & save the history
-            self.model.train()
-            e_losses = []
-            for t in range(self.epochs):
-                e_losses += self.train_epoch(X[train],Y_train)
-                self.msg_svc.INFO("DL :    Epoch {0} -- Loss {1}".format(t,e_losses[-1]))
-            self.histories.append(e_losses)
-
-            # evaluate the model
-            self.msg_svc.INFO("DL : Evaluate the model: ")
-            self.model.eval()
-
-            # Evaluate training sample
-            self.msg_svc.INFO("DL : Predictions from training sample")
-            train_predictions = self.predict(X[train]).data.cpu().numpy()
-
-            for p,v in zip(train_predictions,Y_train):
-                for n,val in self.targets.iteritems():
-                    if val==v: h_trains[n].Fill(p)
-            train_predictions = None # clear the value from memory
-
-            # Evaluate test sample
-            self.msg_svc.INFO("DL : Predictions from testing sample")
-            test_predictions  = self.predict(X[test]).data.cpu().numpy()
-
-            for p,v in zip(test_predictions,Y_train):
-                for n,val in self.targets.iteritems():
-                    if val==v: h_tests[n].Fill(p)
-
-            # Make ROC curve from test sample
-            self.msg_svc.INFO("DL : Make ROC curves")
-            fprs = None
-            tprs = None
-            for beg_i in range(0, len(Y[test]), self.batch_size):
-                fpr,tpr,_ = roc_curve(Y[test][beg_i:beg_i+self.batch_size],test_predictions[beg_i:beg_i+self.batch_size])
-                try: fprs+=fpr
-                except: fprs=fpr
-                try: tprs+=tpr
-                except: tprs=tpr
-            self.fpr.append(fprs)
-            self.tpr.append(tprs)
-
-            # Plot the predictions to compare test/train
-            self.msg_svc.INFO("DL : Plot the train/test predictions")
-            h_test = []
-            self.plotter.prediction(h_trains,h_tests,ind)   # compare DNN prediction for different targets
-
-            # reset some objects
-            test_predictions = None
-
-        self.msg_svc.INFO("DL :   Finished K-Fold cross-validation: ")
-        self.accuracy = {'mean':np.mean(cvpredictions),'std':np.std(cvpredictions)}
-        self.msg_svc.INFO("DL :   - Accuracy: {0:.2f}% (+/- {1:.2f}%)".format(np.mean(cvpredictions), np.std(cvpredictions)))
-
-        return
-
+    def save_model(self,to_lwtnn=False):
+        """Save the model for use later"""
+        pass
 
     def predict(self,data=None):
         """Return the prediction from a test sample"""
-        self.msg_svc.INFO("DL : Get the DNN prediction")
-        if data is None:
-            self.msg_svc.ERROR("DL : predict() given NoneType data. Returning -999.")
-            return -999.
-        data = torch.from_numpy(data)
-        self.model.eval()
-        result = self.model( Variable(data,volatile=True).cuda() )
-
-        return result
+        pass
 
 
     def load_hep_data(self,variables2plot=[]):
@@ -373,41 +219,33 @@ class DeepLearning(object):
         @param variables2plot    If there are extra variables to plot, 
                                  that aren't features of the NN, include them here
         """
-        file    = uproot.open(self.hep_data)
-        data    = file[self.treename]
-        self.df = data.pandas.df( self.features+['target']+variables2plot )
+        file = uproot.open(self.hep_data)
+        data = file[self.treename]
+        df   = data.pandas.df( self.features+['target']+variables2plot )
+
+        self.msg_svc.DEBUG("DL : Scale the inputs")
+        scaler = StandardScaler()
+        df[self.features] = scaler.fit_transform(df[self.features])
 
         # Make the dataset sizes equal (trim away some background)
-        signal = self.df[ self.df['target']==1 ]
-        bckg   = self.df[ self.df['target']==0 ]
-        backg  = bckg.sample(frac=1)[0:signal.shape[0]]      # equal statistics (& shuffle first!)
+        fraction=0.001
+        signal = df[ (df.target==1)&(df.AK4_CSVv2>=0) ]
+        bckg   = df[ (df.target==0)&(df.AK4_CSVv2>=0) ]
+        backg  = bckg.sample(frac=1)[0:signal.shape[0]]    # equal statistics (& shuffle first!)
 
-        self.df = pd.concat( [bckg,signal] ).sample(frac=1)  # re-combine into dataframe and shuffle
+        # re-combine into dataframe and shuffle
+        self.df = pd.concat( [backg.sample(frac=fraction),signal.sample(frac=fraction)] ).sample(frac=1)
 
-        self.metadata = file['metadata']   # names of samples, target values, etc.
-
-        return
-
-
-    def load_model(self,from_lwtnn=False):
-        """Load existing model to make plots or predictions"""
-        output = self.output_dir+'/'+self.model_name
-        self.model.load_state_dict(torch.load(output))
-        self.model.eval()
-        return
-
-
-    def save_model(self,to_lwtnn=False):
-        """Save the model for use later"""
-        output = self.output_dir+'/'+self.model_name
-        torch.save(self.model.state_dict(),output)
+        df = None
+        self.metadata = {'metadata':file.get('metadata'),      # names of samples, target values, etc.
+                         'offsets':[-1.*i for i in scaler.mean_],
+                         'scales':[1./i for i in scaler.scale_]}
 
         return
 
 
     def diagnostics(self,pre=False,post=False):
         """Diagnostic tests of the NN"""
-
         self.msg_svc.INFO("DL : Diagnostics")
 
         # Diagnostics before the training
@@ -420,11 +258,10 @@ class DeepLearning(object):
         # post training/testing
         if post:
             self.msg_svc.INFO("DL : -- post-training plots")
-            self.plotter.ROC(self.fpr,self.tpr,self.accuracy)  # ROC curve for signal vs background
-            self.plotter.loss_history(self.histories) # loss as a function of epoch
+            self.plotter.ROC(self.fpr,self.tpr)  # ROC curve for signal vs background
+            self.plotter.history(self.histories) # history metrics as a function of epoch
 
         return
 
 
 ## THE END ##
-
