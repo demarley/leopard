@@ -35,9 +35,6 @@ except KeyError:
     hpd = cwd.rstrip("leopard/python")+"/hepPlotter/python/"
     if hpd not in sys.path:
         sys.path.insert(0,hpd)
-        print("Added {0} to path!".format(hpd))
-    else:
-        print("Already exists in path!")
     from histogram1D import Histogram1D
     from histogram2D import Histogram2D
     import labels as hpl
@@ -71,6 +68,7 @@ class DeepLearningPlotter(object):
         self.betterColors    = hpt.betterColors()['linecolors']
         self.sample_labels   = plb.sample_labels()
         self.variable_labels = plb.variable_labels()
+        self.scaled_inputs   = False
 
         self.msg_svc      = util.VERBOSE()
         self.output_dir   = ''
@@ -84,7 +82,7 @@ class DeepLearningPlotter(object):
         self.CMSlabelStatus = "Simulation Internal"
 
 
-    def initialize(self,dataframe,targets={}):
+    def initialize(self,dataframe,targets={},scaled_inputs=False):
         """
         Set parameters of class to make plots
 
@@ -93,6 +91,7 @@ class DeepLearningPlotter(object):
         @param target_values  The values for the different targets, e.g., [0,1,2,...]
         """
         self.df = dataframe
+        self.scaled_inputs = scaled_inputs
 
         self.listOfFeatures     = [i for i in self.df.keys() if i!='target']
         self.listOfFeaturePairs = list(itertools.combinations(self.listOfFeatures,2))
@@ -121,6 +120,7 @@ class DeepLearningPlotter(object):
           For regression, just plot the features        <- should do data/mc plots instead!
         """
         self.msg_svc.INFO("DL : Plotting features.")
+        scaled_binning = self.variable_labels['scaled'].binning
 
         # plot the features and calculate significance
         for hi,feature in enumerate(self.listOfFeatures):
@@ -129,7 +129,7 @@ class DeepLearningPlotter(object):
 
             hist.normed  = True
             hist.stacked = False
-            hist.binning = self.variable_labels[feature].binning
+            hist.binning = self.variable_labels[feature].binning if not self.scaled_inputs else scaled_binning
             hist.x_label = self.variable_labels[feature].label
             hist.y_label = "A.U." if hist.normed else "Events"
             hist.format  = self.image_format
@@ -139,6 +139,7 @@ class DeepLearningPlotter(object):
 
             hist.ratio.value  = "significance"
             hist.ratio.ylabel = r"S/$\sqrt{\text{B}}$"
+            hist.ratio.ymin   = {'ymin':0}
 
             hist.initialize()
 
@@ -177,7 +178,7 @@ class DeepLearningPlotter(object):
                 hist.colormap = 'default'
                 hist.colorbar['title'] = "Events"
 
-                hist.binning = [xbins.tolist(),ybins.tolist()]
+                hist.binning = [xbins.tolist(),ybins.tolist()] if not self.scaled_inputs else [20,20]
                 hist.x_label = self.variable_labels[xfeature].label
                 hist.y_label = self.variable_labels[yfeature].label
                 hist.format  = self.image_format
@@ -215,8 +216,6 @@ class DeepLearningPlotter(object):
         for target in self.target_pairs:
             target_a = target[0]
             target_b = target[1]
-
-            print "separations ",target_a,target_b
 
             ## One dimensional separation plot (horizontal bar chart)
             saveAs = "{0}/separations1D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)

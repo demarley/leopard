@@ -23,6 +23,7 @@ that are accessed via uproot.
 > PYTORCH:    http://pytorch.org/
 > LWTNN:      https://github.com/lwtnn/lwtnn
 """
+import os
 import json
 import util
 import datetime
@@ -33,7 +34,10 @@ from deepLearningPlotter import DeepLearningPlotter
 import uproot
 import numpy as np
 import pandas as pd
+
 from sklearn.preprocessing import StandardScaler
+from sklearn.externals import joblib
+
 
 class DeepLearning(object):
     """Deep Learning base class"""
@@ -63,6 +67,7 @@ class DeepLearning(object):
         self.model_name = ""            # Name for saving/loading model
         self.output_dir = 'data/dnn/'   # directory for storing NN data
         self.dnn_method = None          # DNN method applied: classification/regression: ['binary','multi','regression']
+        self.scale_inputs   = True      # Scale inputs for training/testing/etc.
         self.runDiagnostics = True      # Make plots pre/post training
         self.verbose_level  = 'INFO'
         self.verbose = False
@@ -110,7 +115,6 @@ class DeepLearning(object):
         ## -- Plotting framework
         self.msg_svc.INFO("DL :  >> Store output in {0}".format(self.output_dir))
         self.plotter = DeepLearningPlotter()  # class for plotting relevant NN information
-        self.plotter.output_dir   = self.output_dir
         self.plotter.image_format = 'pdf'
 
         ## -- Adjust model architecture parameters (flexibilty in config file)
@@ -134,10 +138,6 @@ class DeepLearning(object):
             first_hidden_act = self.activations[0]
             output_act       = self.activations[1]
             self.activations = [first_hidden_act for _ in range(self.nHiddenLayers+1)]+[output_act]
-
-        print self.activations
-        print self.nNodes
-        print self.nHiddenLayers
 
         return
 
@@ -208,13 +208,29 @@ class DeepLearning(object):
         file = uproot.open(self.hep_data)
         data = file[self.treename]
         df   = data.pandas.df( self.features+['target']+variables2plot )
+        self.metadata = {'metadata':file.get('metadata')}       # names of samples, target values, etc.
 
-        self.msg_svc.DEBUG("DL : Scale the inputs")
-        scaler = StandardScaler()
-        df[self.features] = scaler.fit_transform(df[self.features])
+        if self.scale_inputs:
+            # Set the plotter to get plots pre-scaled inputs
+            output = self.output_dir+"/prescale/"
+            if not os.path.isdir(output): os.system( 'mkdir -p {0}'.format(output) )
+            self.plotter.output_dir = output
+            self.plotter.initialize(df,self.targets)
+            if self.runDiagnostics: self.diagnostics(pre=True)
+
+            self.msg_svc.DEBUG("DL : Scale the inputs")
+            scaler = StandardScaler()
+            df[self.features] = scaler.fit_transform(df[self.features])
+            joblib.dump(scaler, '{0}/scaler.pkl'.format(self.output_dir)) 
+
+            for f in self.features: print '{0}: mean={1}; std={2}'.format(f,df[f].mean(),df[f].std())
+
+            # record scale parameters for later
+            self.metadata['offsets'] = [-1.*i for i in scaler.mean_]
+            self.metadata['scales']  = [1./i for i in scaler.scale_]
 
         # Make the dataset sizes equal (trim away some background)
-        fraction=0.01
+        fraction = 1
         signal = df[ (df.target==1)&(df.AK4_CSVv2>=0) ]
         bckg   = df[ (df.target==0)&(df.AK4_CSVv2>=0) ]
         backg  = bckg.sample(frac=1)[0:signal.shape[0]]    # equal statistics (& shuffle first!)
@@ -222,10 +238,10 @@ class DeepLearning(object):
         # re-combine into dataframe and shuffle
         self.df = pd.concat( [backg.sample(frac=fraction),signal.sample(frac=fraction)] ).sample(frac=1)
 
-        del df
-        self.metadata = {'metadata':file.get('metadata'),      # names of samples, target values, etc.
-                         'offsets':[-1.*i for i in scaler.mean_],
-                         'scales':[1./i for i in scaler.scale_]}
+        # reset/define the plotter
+        self.plotter.output_dir = self.output_dir
+        self.plotter.initialize(self.df,self.targets,self.scale_inputs)
+        if self.runDiagnostics: self.diagnostics(pre=True)
 
         return
 

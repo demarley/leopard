@@ -62,6 +62,8 @@ def variable_labels():
     variables['met_met'] = Variable(binning=hpt.hist1d(50,    0,1000), label=r'E$_{\text{T}}^{\text{miss}}$ [GeV]')
     variables['met_phi'] = Variable(binning=hpt.hist1d(16, -3.2, 3.2), label=r'$\phi^{\text{miss}}$ [GeV]')
 
+    variables['scaled'] = Variable(binning=hpt.hist1d(10,-5,5), label='Scaled Input')
+
     return variables
 
 

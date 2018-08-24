@@ -20,13 +20,11 @@ import util
 from config import Config
 from collections import Counter
 from time import strftime,localtime
-from deepLearningTorch import DeepLearningTorch
-from deepLearningKeras import DeepLearningKeras
 
 
 print
 print " ------------------------------ "
-print " * Deep Learning with PyTorch * "
+print " *       Deep Learning        * "
 print " ------------------------------ "
 print
 
@@ -83,8 +81,10 @@ hep_data_name = config.hep_data.split('/')[-1].split('.')[0]
 ## Setup Deep Learning class
 dnn = None
 if config.framework=='pytorch':
+    from deepLearningTorch import DeepLearningTorch
     dnn = DeepLearningTorch()
 elif config.framework=='keras':
+    from deepLearningKeras import DeepLearningKeras
     dnn = DeepLearningKeras()
 else:
     print " ERROR : Framework {0} is unsupported.  Consider using 'pytorch' or 'keras'".format(config.framework)
@@ -129,9 +129,6 @@ if not os.path.isdir(output):
     os.system( 'mkdir -p {0}'.format(output) )
 else:
     vb.INFO("RUN :  Saving output to {0}".format(output))
-
-## load hep data (physics data -- .json file). Always need this for testing/training
-dnn.features = config.features
 
 ## Setup
 dnn.initialize()

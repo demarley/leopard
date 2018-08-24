@@ -8,14 +8,14 @@ output_path /data/demarley/b2g/leopard/
 method binary
 nHiddenLayers 4
 nNodes 40
-epochs 5
+epochs 50
 batch_size 64
 loss binary_crossentropy
 activation relu,sigmoid
 optimizer adam
 metrics accuracy
 kfold_splits 2
-init normal
+init uniform
 output_dim 1
 features AK4_CSVv2,mass_lep_AK4,deltaR_lep_AK4,ptrel_lep_AK4
 nEntries -1
